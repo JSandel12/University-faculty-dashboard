@@ -59,8 +59,19 @@ html.theme-transitioning .wk-word,
 html.theme-transitioning .k-word {
   will-change: auto !important;
 }
+html.theme-transitioning .pass-cube {
+  transform-style: flat !important;
+}
+html.theme-transitioning .pass-bezel-slice,
 html.theme-transitioning .pass-ambient-glow {
   display: none !important;
+}
+html.theme-transitioning .pass-face-front {
+  transform: none !important;
+  z-index: 2;
+}
+html.theme-transitioning .pass-face-back {
+  z-index: 1;
 }
 html.theme-transitioning aside {
   contain: layout paint;

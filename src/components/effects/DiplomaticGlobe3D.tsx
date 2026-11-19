@@ -232,6 +232,7 @@ export function DiplomaticGlobe3D({
       renderer = new THREE.WebGLRenderer({
         antialias: true,
         alpha: true,
+        preserveDrawingBuffer: true,
         powerPreference: "high-performance",
       });
       renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
@@ -529,7 +530,13 @@ export function DiplomaticGlobe3D({
 
       const animate = () => {
         animId = requestAnimationFrame(animate);
-        if (!isVisible) return;
+        if (
+          !isVisible ||
+          document.documentElement.classList.contains("theme-transitioning") ||
+          document.documentElement.classList.contains("lang-transitioning")
+        ) {
+          return;
+        }
 
         const dt = Math.min(clock.getDelta(), 0.05);
         const t = clock.elapsedTime;
