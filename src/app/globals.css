@@ -86,7 +86,7 @@ html.theme-transitioning::view-transition-new(root) {
 
 /* Diagonal Editorial Sweep for RU <-> EN Language Switch */
 html.lang-transitioning,
-html.lang-transitioning * {
+html.lang-transitioning *:not(.lang-switch-animated) {
   transition: none !important;
 }
 html.lang-transitioning::view-transition-group(root) {

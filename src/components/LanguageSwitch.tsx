@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { useEffect, useRef, useState } from "react";
 import type { Lang } from "@/lib/i18n";
 
 interface LanguageSwitchProps {
@@ -54,6 +54,7 @@ function FlagUK({ className = "w-3.5 h-3.5" }: { className?: string }) {
 
 /**
  * Tactile iOS-style pill toggle switch for RU / EN with crisp SVG flags.
+ * Animates the thumb slide smoothly before firing the root View Transition wipe.
  */
 export function LanguageSwitch({
   lang,
@@ -61,7 +62,36 @@ export function LanguageSwitch({
   variant = "surface",
   className = "",
 }: LanguageSwitchProps) {
-  const isEn = lang === "en";
+  const [visualLang, setVisualLang] = useState<Lang>(lang);
+  const timerRef = useRef<number | null>(null);
+
+  useEffect(() => {
+    setVisualLang(lang);
+  }, [lang]);
+
+  useEffect(() => {
+    return () => {
+      if (timerRef.current !== null) {
+        window.clearTimeout(timerRef.current);
+      }
+    };
+  }, []);
+
+  const isEn = visualLang === "en";
+
+  const handleClick = () => {
+    const next: Lang = visualLang === "ru" ? "en" : "ru";
+    setVisualLang(next);
+
+    if (timerRef.current !== null) {
+      window.clearTimeout(timerRef.current);
+    }
+    // Let the thumb glide cleanly across before View Transition snapshots the DOM
+    timerRef.current = window.setTimeout(() => {
+      timerRef.current = null;
+      onToggle();
+    }, 260);
+  };
 
   const trackClass =
     variant === "glass"
@@ -75,13 +105,13 @@ export function LanguageSwitch({
 
   const activeText =
     variant === "glass"
-      ? "text-[#0D1B2A]"
-      : "text-[#0D1B2A] dark:text-white";
+      ? "text-[#0D1B2A] scale-100 opacity-100"
+      : "text-[#0D1B2A] dark:text-white scale-100 opacity-100";
 
   const inactiveText =
     variant === "glass"
-      ? "text-white/75"
-      : "text-slate-600 dark:text-white/65";
+      ? "text-white/75 scale-95 opacity-80"
+      : "text-slate-600 dark:text-white/65 scale-95 opacity-80";
 
   return (
     <button
@@ -89,20 +119,20 @@ export function LanguageSwitch({
       role="switch"
       aria-checked={isEn}
       aria-label={isEn ? "Switch language to Russian" : "Switch language to English"}
-      onClick={onToggle}
-      className={`relative inline-grid grid-cols-2 items-center p-0.5 rounded-full h-8 w-[104px] select-none cursor-pointer transition-colors shrink-0 ${trackClass} ${className}`}
+      onClick={handleClick}
+      className={`lang-switch-animated relative inline-grid grid-cols-2 items-center p-0.5 rounded-full h-8 w-[104px] select-none cursor-pointer transition-transform duration-150 active:scale-[0.97] shrink-0 ${trackClass} ${className}`}
     >
       {/* Springy iPhone-style sliding pill thumb */}
       <span
         aria-hidden="true"
-        className={`absolute top-0.5 left-0.5 h-7 w-[49px] rounded-full transition-transform duration-300 ease-[cubic-bezier(0.34,1.56,0.64,1)] ${thumbClass} ${
+        className={`lang-switch-animated absolute top-0.5 left-0.5 h-7 w-[49px] rounded-full transition-transform duration-300 ease-[cubic-bezier(0.34,1.56,0.64,1)] ${thumbClass} ${
           isEn ? "translate-x-[50px]" : "translate-x-0"
         }`}
       />
 
       {/* Left Side: RU */}
       <span
-        className={`relative z-10 flex items-center justify-center gap-1 text-[11px] font-bold tracking-tight transition-colors duration-200 ${
+        className={`lang-switch-animated relative z-10 flex items-center justify-center gap-1 text-[11px] font-bold tracking-tight transition-all duration-200 ${
           !isEn ? activeText : inactiveText
         }`}
       >
@@ -112,7 +142,7 @@ export function LanguageSwitch({
 
       {/* Right Side: EN */}
       <span
-        className={`relative z-10 flex items-center justify-center gap-1 text-[11px] font-bold tracking-tight transition-colors duration-200 ${
+        className={`lang-switch-animated relative z-10 flex items-center justify-center gap-1 text-[11px] font-bold tracking-tight transition-all duration-200 ${
           isEn ? activeText : inactiveText
         }`}
       >
