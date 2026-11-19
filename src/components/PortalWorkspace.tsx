@@ -16,6 +16,7 @@ import {
   LayoutDashboard,
   Lock,
   LogOut,
+  MapPin,
   Menu,
   Moon,
   Plus,
@@ -38,6 +39,7 @@ import type {
   ScheduleItem,
 } from "@/lib/types";
 import { BrandEmblem } from "./BrandEmblem";
+import { CampusMapSection } from "./CampusMapSection";
 import { CertificateModal } from "./CertificateModal";
 import { CommandAssistantModal } from "./CommandAssistantModal";
 import { PremiumCalendar } from "./PremiumCalendar";
@@ -101,6 +103,7 @@ export function PortalWorkspace({
   const [activeTab, setActiveTab] = useState<string>(
     isStaff ? "staff_queue" : "overview"
   );
+  const [mapFocusRoom, setMapFocusRoom] = useState<string | null>(null);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [assistantOpen, setAssistantOpen] = useState(false);
   const [certPreview, setCertPreview] = useState<CertificateRequest | null>(null);
@@ -165,6 +168,7 @@ export function PortalWorkspace({
         { id: "staff_schedule", label: t.navStaffSchedule },
         { id: "staff_broadcast", label: t.navStaffBroadcast },
         { id: "notifications", label: t.navNotifications, badge: unreadCount || undefined },
+        { id: "campus", label: t.navCampus },
         { id: "profile", label: t.navProfile },
       ];
     }
@@ -173,6 +177,7 @@ export function PortalWorkspace({
       { id: "schedule", label: t.navSchedule },
       { id: "academics", label: t.navAcademics },
       { id: "requests", label: t.navRequests, badge: requests.length || undefined },
+      { id: "campus", label: t.navCampus },
       { id: "notifications", label: t.navNotifications, badge: unreadCount || undefined },
       { id: "profile", label: t.navProfile },
     ];
@@ -528,14 +533,23 @@ export function PortalWorkspace({
                         <span className="font-mono font-semibold text-[var(--text-primary)]">
                           {schedule[0].startTime}–{schedule[0].endTime}
                         </span>
-                        <span>
-                          {schedule[0].room}
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setMapFocusRoom(schedule[0].room);
+                            setActiveTab("campus");
+                          }}
+                          className="inline-flex items-center gap-1 text-[var(--accent)] font-medium hover:underline"
+                          title={lang === "ru" ? "Открыть на карте кампуса" : "Show on campus map"}
+                        >
+                          <MapPin className="w-3.5 h-3.5 shrink-0" />
+                          <span>{schedule[0].room}</span>
                           {schedule[0].originalRoom && (
-                            <span className="line-through ml-1.5 opacity-60">
+                            <span className="line-through ml-1 opacity-60 text-[var(--text-secondary)]">
                               {schedule[0].originalRoom}
                             </span>
                           )}
-                        </span>
+                        </button>
                         <span>{schedule[0].lecturer}</span>
                       </div>
                       {schedule[0].changeNote && (
@@ -1192,6 +1206,17 @@ export function PortalWorkspace({
                   })}
               </div>
             </div>
+          )}
+
+          {/* === INTERACTIVE CAMPUS & BUILDING FLOOR MAP === */}
+          {activeTab === "campus" && (
+            <CampusMapSection
+              lang={lang}
+              schedule={schedule}
+              isStaff={isStaff}
+              focusRoomQuery={mapFocusRoom}
+              onNavigateTab={(tab) => setActiveTab(tab)}
+            />
           )}
 
           {/* === PROFILE & SECURITY TAB === */}
