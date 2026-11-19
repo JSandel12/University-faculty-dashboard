@@ -1319,7 +1319,12 @@ export function PortalWorkspace({
 
                 {!isStaff && (
                   <div className="pt-3 border-t border-[var(--border-color)] space-y-2.5">
-                    <p className="text-xs font-semibold">{t.securityTestTitle}</p>
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <p className="text-xs font-semibold">{t.securityTestTitle}</p>
+                      <span className="text-[10px] font-mono uppercase tracking-wider px-2 py-0.5 rounded-full bg-[#C49A45]/15 text-[#9A7426] dark:text-[#DFB863] border border-[#C49A45]/35 font-semibold shrink-0">
+                        {lang === "ru" ? "Для жюри · Demo" : "For Jury · Demo"}
+                      </span>
+                    </div>
                     <p className="text-xs text-[var(--text-secondary)]">
                       {t.securityTestDesc}
                     </p>

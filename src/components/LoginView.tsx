@@ -189,20 +189,20 @@ export function LoginView({
               {
                 v: "2 клика",
                 vEn: "2 taps",
-                k: "Справка",
-                kEn: "Docs",
+                k: "Справки PDF",
+                kEn: "Certificates",
               },
               {
-                v: "3D + QR",
-                vEn: "3D + QR",
-                k: "Студ. билет",
-                kEn: "Campus ID",
+                v: "3 корпуса",
+                vEn: "3 Wings",
+                k: "Карта и пары",
+                kEn: "Campus & Map",
               },
               {
-                v: "403 RBAC",
-                vEn: "403 RBAC",
-                k: "Защита",
-                kEn: "Isolation",
+                v: "24/7",
+                vEn: "24/7",
+                k: "Без очередей",
+                kEn: "Zero Queues",
               },
             ].map((stat) => (
               <div
