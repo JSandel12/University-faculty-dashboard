@@ -275,3 +275,11 @@ html.lang-transitioning.lang-rtl::view-transition-new(root) {
     display: none !important;
   }
 }
+
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}

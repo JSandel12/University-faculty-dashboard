@@ -1377,85 +1377,84 @@ export function CampusMapSection({
       {/* SECTION 2: ANIMATED FLOOR BLUEPRINT + INSPECTOR */}
       <div className="grid lg:grid-cols-12 gap-4 sm:gap-5 items-start">
         <div className="stagger-item lg:col-span-7 rounded-3xl bg-[var(--bg-surface)] border border-[var(--border-color)] p-3.5 sm:p-5 shadow-sm space-y-3.5 min-w-0">
-          {/* Building Floor Header + Floor Selector */}
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <div className="min-w-0">
-              <h2 className="text-sm sm:text-base font-semibold flex items-center gap-2 truncate">
-                <Layers className="w-4 h-4 text-[var(--accent)] shrink-0" />
-                <span className="truncate">
-                  {lang === "ru" ? activeBuilding.name : activeBuilding.nameEn} ·{" "}
-                  {floorLabel(activeBuilding, floor)}
-                </span>
-              </h2>
-            </div>
+          {/* Building Floor Header */}
+          <div className="space-y-2.5">
+            <h2 className="text-sm sm:text-base font-semibold flex items-center gap-2 truncate">
+              <Layers className="w-4 h-4 text-[var(--accent)] shrink-0" />
+              <span className="truncate">
+                {lang === "ru" ? activeBuilding.name : activeBuilding.nameEn} ·{" "}
+                {floorLabel(activeBuilding, floor)}
+              </span>
+            </h2>
 
-            <div className="inline-flex rounded-xl bg-[var(--bg-page)] border border-[var(--border-color)] p-1 shrink-0">
-              {activeBuilding.floors.map((fl) => (
-                <button
-                  key={fl}
-                  type="button"
-                  onClick={() => selectFloor(fl)}
-                  className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition-all ${
-                    floor === fl
-                      ? "bg-[#0D1B2A] dark:bg-[#1B4B8A] text-white shadow-sm"
-                      : "text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
-                  }`}
-                >
-                  {floorLabel(activeBuilding, fl)}
-                </button>
-              ))}
+            {/* Row 1: Floor Switcher + Wayfinding Route Toggle */}
+            <div className="flex items-center justify-between gap-2">
+              <div className="inline-flex rounded-xl bg-[var(--bg-page)] border border-[var(--border-color)] p-1 shrink-0">
+                {activeBuilding.floors.map((fl) => (
+                  <button
+                    key={fl}
+                    type="button"
+                    onClick={() => selectFloor(fl)}
+                    className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition-all ${
+                      floor === fl
+                        ? "bg-[#0D1B2A] dark:bg-[#1B4B8A] text-white shadow-sm"
+                        : "text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
+                    }`}
+                  >
+                    {floorLabel(activeBuilding, fl)}
+                  </button>
+                ))}
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setShowRoute((v) => !v)}
+                className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold border transition-colors shrink-0 ${
+                  showRoute
+                    ? "bg-amber-500/15 border-amber-500/45 text-amber-800 dark:text-amber-200"
+                    : "bg-[var(--bg-page)] border-[var(--border-color)] text-[var(--text-secondary)]"
+                }`}
+              >
+                <Navigation className="w-3.5 h-3.5 text-[#C49A45]" />
+                {lang === "ru" ? "Маршрут" : "Route"}
+              </button>
             </div>
           </div>
 
-          {/* Filter Chips + Route Toggle (Clean wrap, zero clipping) */}
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <div className="flex flex-wrap items-center gap-1.5">
-              {(
-                [
-                  { id: "all", ru: "Все", en: "All" },
-                  { id: "auditorium", ru: "Аудитории", en: "Rooms" },
-                  { id: "hall", ru: "Залы", en: "Halls" },
-                  { id: "service", ru: "Сервисы", en: "Services" },
-                  { id: "my_classes", ru: "Мои пары", en: "Classes" },
-                ] as const
-              ).map((cat) => (
-                <button
-                  key={cat.id}
-                  type="button"
-                  onClick={() => {
-                    setCategoryFilter(cat.id);
-                    const nextMatch = allFloorRooms.find((r) => {
-                      if (cat.id === "my_classes") {
-                        return schedule.some((s) => roomMatchesSchedule(r, s));
-                      }
-                      if (cat.id !== "all") return r.category === cat.id;
-                      return true;
-                    });
-                    if (nextMatch) setSelectedRoomId(nextMatch.id);
-                  }}
-                  className={`whitespace-nowrap px-2.5 py-1.5 rounded-xl text-[11px] font-medium border transition-colors ${
-                    categoryFilter === cat.id
-                      ? "bg-[#0D1B2A] dark:bg-[#1B4B8A] text-white border-transparent"
-                      : "bg-[var(--bg-page)] border-[var(--border-color)] text-[var(--text-secondary)]"
-                  }`}
-                >
-                  {lang === "ru" ? cat.ru : cat.en}
-                </button>
-              ))}
-            </div>
-
-            <button
-              type="button"
-              onClick={() => setShowRoute((v) => !v)}
-              className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[11px] font-semibold border transition-colors shrink-0 ${
-                showRoute
-                  ? "bg-amber-500/15 border-amber-500/45 text-amber-800 dark:text-amber-200"
-                  : "bg-[var(--bg-page)] border-[var(--border-color)] text-[var(--text-secondary)]"
-              }`}
-            >
-              <Navigation className="w-3 h-3 text-[#C49A45]" />
-              {lang === "ru" ? "Маршрут" : "Route"}
-            </button>
+          {/* Row 2: Single Swipeable Category Row (zero scrollbar, swipe L/R) */}
+          <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar -mx-1 px-1">
+            {(
+              [
+                { id: "all", ru: "Все", en: "All" },
+                { id: "auditorium", ru: "Аудитории", en: "Rooms" },
+                { id: "hall", ru: "Залы", en: "Halls" },
+                { id: "service", ru: "Сервисы", en: "Services" },
+                { id: "my_classes", ru: "Мои пары", en: "Classes" },
+              ] as const
+            ).map((cat) => (
+              <button
+                key={cat.id}
+                type="button"
+                onClick={() => {
+                  setCategoryFilter(cat.id);
+                  const nextMatch = allFloorRooms.find((r) => {
+                    if (cat.id === "my_classes") {
+                      return schedule.some((s) => roomMatchesSchedule(r, s));
+                    }
+                    if (cat.id !== "all") return r.category === cat.id;
+                    return true;
+                  });
+                  if (nextMatch) setSelectedRoomId(nextMatch.id);
+                }}
+                className={`whitespace-nowrap shrink-0 px-3 py-1.5 rounded-xl text-xs font-medium border transition-colors ${
+                  categoryFilter === cat.id
+                    ? "bg-[#0D1B2A] dark:bg-[#1B4B8A] text-white border-transparent shadow-sm"
+                    : "bg-[var(--bg-page)] border-[var(--border-color)] text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
+                }`}
+              >
+                {lang === "ru" ? cat.ru : cat.en}
+              </button>
+            ))}
           </div>
 
           {/* Animated SVG Architectural Floor Blueprint */}
@@ -1728,7 +1727,7 @@ export function CampusMapSection({
                 : "No rooms match this filter on this floor."}
             </p>
           ) : (
-            <div className="flex flex-wrap gap-1.5">
+            <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar -mx-1 px-1 sm:flex-wrap sm:overflow-visible sm:mx-0 sm:px-0">
               {floorRooms.map((r) => {
                 const active = selectedRoom?.id === r.id;
                 return (
@@ -1736,7 +1735,7 @@ export function CampusMapSection({
                     key={r.id}
                     type="button"
                     onClick={() => setSelectedRoomId(r.id)}
-                    className={`whitespace-nowrap px-3 py-1.5 rounded-xl text-xs font-medium border transition-all ${
+                    className={`whitespace-nowrap shrink-0 px-3 py-1.5 rounded-xl text-xs font-medium border transition-all ${
                       active
                         ? "bg-[#0D1B2A] dark:bg-[#1B4B8A] text-white border-transparent shadow-sm"
                         : "bg-[var(--bg-page)] border-[var(--border-color)] hover:border-[var(--accent)]"
