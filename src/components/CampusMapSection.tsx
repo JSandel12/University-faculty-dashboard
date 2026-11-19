@@ -1,6 +1,7 @@
 "use client";
 
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
+import gsap from "gsap";
 import {
   Accessibility,
   Building2,
@@ -38,10 +39,12 @@ interface FloorRoom {
   routeHint: string;
   routeHintEn: string;
   matchTokens: string[];
-  /** SVG coordinates inside viewBox 0 0 720 360 */
   rect: { x: number; y: number; w: number; h: number };
-  /** Waypoints from floor entrance (360, 180) to the room door */
+  /** Door position on corridor edge + schematic motif */
+  doorSide: "bottom" | "top";
+  motif?: "amphitheater" | "workstations" | "service" | "moot";
   pathPoints: string;
+  destPoint: { x: number; y: number };
 }
 
 interface BuildingMeta {
@@ -49,6 +52,8 @@ interface BuildingMeta {
   code: string;
   name: string;
   nameEn: string;
+  shortName: string;
+  shortNameEn: string;
   subtitle: string;
   subtitleEn: string;
   floors: number[];
@@ -62,33 +67,39 @@ const BUILDINGS: BuildingMeta[] = [
     code: "A",
     name: "Главный корпус",
     nameEn: "Main Diplomatic Wing",
+    shortName: "Главный (A)",
+    shortNameEn: "Main (A)",
     subtitle: "Деканат (каб. 214), залы, читальный зал и классические аудитории",
     subtitleEn: "Dean's Office (Rm. 214), moot court, library & lecture halls",
     floors: [1, 2, 3],
     walkTime: "2 мин от КПП",
-    walkTimeEn: "2 min from Main Gate",
+    walkTimeEn: "2 min from Gate",
   },
   {
     id: "new_wing",
     code: "B",
     name: "Новый корпус",
     nameEn: "New Auditorium Wing",
+    shortName: "Новый (B)",
+    shortNameEn: "New Wing (B)",
     subtitle: "Потоковые залы-амфитеатры (Зал № 4), форум-атриум и МФЦ",
     subtitleEn: "Streaming amphitheaters (Hall #4), forum atrium & service desk",
     floors: [1, 3],
-    walkTime: "4 мин через галерею",
-    walkTimeEn: "4 min via skybridge",
+    walkTime: "4 мин по галерее",
+    walkTimeEn: "4 min skybridge",
   },
   {
     id: "tech_hub",
     code: "C",
     name: "Корпус права и ИТ",
     nameEn: "Tech & Law Hub",
+    shortName: "Право и ИТ (C)",
+    shortNameEn: "Tech & Law (C)",
     subtitle: "Лаборатории анализа данных, семинарские и коворкинг",
     subtitleEn: "Data science labs, seminar rooms & student coworking",
     floors: [1, 3],
     walkTime: "5 мин через сквер",
-    walkTimeEn: "5 min across courtyard",
+    walkTimeEn: "5 min courtyard",
   },
 ];
 
@@ -107,11 +118,14 @@ const ROOMS: FloorRoom[] = [
     capacityEn: "90 seats",
     equipment: ["Трибуна", "Запись эфира", "Синхрон-кабины"],
     equipmentEn: ["Podium", "Broadcast Capture", "Interpretation Booths"],
-    routeHint: "Главный холл → левое крыло → 2-я дверь",
+    routeHint: "Главный холл → левое крыло → 2-я двойная дверь",
     routeHintEn: "Main Lobby → West Wing → 2nd double doors",
     matchTokens: ["зал судеб", "moot"],
     rect: { x: 46, y: 34, w: 185, h: 108 },
-    pathPoints: "360,326 360,180 138,180 138,142",
+    doorSide: "bottom",
+    motif: "moot",
+    pathPoints: "360,322 360,180 138,180 138,142",
+    destPoint: { x: 138, y: 142 },
   },
   {
     id: "main-118",
@@ -122,7 +136,7 @@ const ROOMS: FloorRoom[] = [
     name: "Лингафонный класс дипломатических языков",
     nameEn: "Diplomatic Language & Phonetics Lab",
     category: "lab",
-    capacity: "24 рабочих места",
+    capacity: "24 места",
     capacityEn: "24 stations",
     equipment: ["Гарнитуры", "Аудиоконсоль", "Интерактивная доска"],
     equipmentEn: ["Audio Headsets", "Booth Console", "Smart Board"],
@@ -130,7 +144,10 @@ const ROOMS: FloorRoom[] = [
     routeHintEn: "Main Lobby → West Wing → end of corridor",
     matchTokens: ["лингафон", "118"],
     rect: { x: 248, y: 34, w: 185, h: 108 },
-    pathPoints: "360,326 360,180 340,180 340,142",
+    doorSide: "bottom",
+    motif: "workstations",
+    pathPoints: "360,322 360,180 340,180 340,142",
+    destPoint: { x: 340, y: 142 },
   },
   {
     id: "main-101",
@@ -149,7 +166,9 @@ const ROOMS: FloorRoom[] = [
     routeHintEn: "Main Lobby → East Wing → first door",
     matchTokens: ["101"],
     rect: { x: 450, y: 34, w: 224, h: 108 },
-    pathPoints: "360,326 360,180 562,180 562,142",
+    doorSide: "bottom",
+    pathPoints: "360,322 360,180 562,180 562,142",
+    destPoint: { x: 562, y: 142 },
   },
   {
     id: "main-cafe",
@@ -168,7 +187,10 @@ const ROOMS: FloorRoom[] = [
     routeHintEn: "Main Lobby → straight left beside courtyard",
     matchTokens: ["кафе", "cafe"],
     rect: { x: 46, y: 218, w: 230, h: 108 },
-    pathPoints: "360,326 360,180 160,180 160,218",
+    doorSide: "top",
+    motif: "service",
+    pathPoints: "360,322 360,180 160,180 160,218",
+    destPoint: { x: 160, y: 218 },
   },
   {
     id: "main-pass-desk",
@@ -187,7 +209,10 @@ const ROOMS: FloorRoom[] = [
     routeHintEn: "Central entrance from main avenue",
     matchTokens: ["пропуск", "охрана", "security"],
     rect: { x: 444, y: 218, w: 230, h: 108 },
-    pathPoints: "360,326 360,268 444,268",
+    doorSide: "top",
+    motif: "service",
+    pathPoints: "360,322 360,268 444,268",
+    destPoint: { x: 444, y: 268 },
   },
 
   // MAIN BUILDING — FLOOR 2
@@ -208,7 +233,10 @@ const ROOMS: FloorRoom[] = [
     routeHintEn: "Elevator to 2F → East Wing → glass reception",
     matchTokens: ["214", "деканат", "dean"],
     rect: { x: 450, y: 34, w: 224, h: 108 },
-    pathPoints: "360,326 360,180 562,180 562,142",
+    doorSide: "bottom",
+    motif: "service",
+    pathPoints: "360,322 360,180 562,180 562,142",
+    destPoint: { x: 562, y: 142 },
   },
   {
     id: "main-215",
@@ -227,7 +255,9 @@ const ROOMS: FloorRoom[] = [
     routeHintEn: "Elevator to 2F → central corridor",
     matchTokens: ["215"],
     rect: { x: 248, y: 34, w: 185, h: 108 },
-    pathPoints: "360,326 360,180 340,180 340,142",
+    doorSide: "bottom",
+    pathPoints: "360,322 360,180 340,180 340,142",
+    destPoint: { x: 340, y: 142 },
   },
   {
     id: "main-204",
@@ -246,7 +276,9 @@ const ROOMS: FloorRoom[] = [
     routeHintEn: "Elevator to 2F → West Wing",
     matchTokens: ["204"],
     rect: { x: 46, y: 34, w: 185, h: 108 },
-    pathPoints: "360,326 360,180 138,180 138,142",
+    doorSide: "bottom",
+    pathPoints: "360,322 360,180 138,180 138,142",
+    destPoint: { x: 138, y: 142 },
   },
   {
     id: "main-conf-2",
@@ -265,7 +297,10 @@ const ROOMS: FloorRoom[] = [
     routeHintEn: "Elevator to 2F → left past atrium",
     matchTokens: ["конф", "conf"],
     rect: { x: 46, y: 218, w: 230, h: 108 },
-    pathPoints: "360,326 360,180 160,180 160,218",
+    doorSide: "top",
+    motif: "amphitheater",
+    pathPoints: "360,322 360,180 160,180 160,218",
+    destPoint: { x: 160, y: 218 },
   },
   {
     id: "main-coworking",
@@ -284,7 +319,10 @@ const ROOMS: FloorRoom[] = [
     routeHintEn: "Elevator to 2F → East Gallery",
     matchTokens: ["коворкинг", "атриум", "coworking"],
     rect: { x: 444, y: 218, w: 230, h: 108 },
-    pathPoints: "360,326 360,180 560,180 560,218",
+    doorSide: "top",
+    motif: "workstations",
+    pathPoints: "360,322 360,180 560,180 560,218",
+    destPoint: { x: 560, y: 218 },
   },
 
   // MAIN BUILDING — FLOOR 3
@@ -305,7 +343,9 @@ const ROOMS: FloorRoom[] = [
     routeHintEn: "Elevator to 3F → left, second door",
     matchTokens: ["308"],
     rect: { x: 46, y: 34, w: 295, h: 112 },
-    pathPoints: "360,326 360,180 194,180 194,146",
+    doorSide: "bottom",
+    pathPoints: "360,322 360,180 194,180 194,146",
+    destPoint: { x: 194, y: 146 },
   },
   {
     id: "main-library",
@@ -324,7 +364,10 @@ const ROOMS: FloorRoom[] = [
     routeHintEn: "Elevator to 3F → straight into Reading Hall",
     matchTokens: ["читал", "библио", "library"],
     rect: { x: 365, y: 34, w: 309, h: 112 },
-    pathPoints: "360,326 360,180 520,180 520,146",
+    doorSide: "bottom",
+    motif: "workstations",
+    pathPoints: "360,322 360,180 520,180 520,146",
+    destPoint: { x: 520, y: 146 },
   },
   {
     id: "main-tutors",
@@ -343,7 +386,10 @@ const ROOMS: FloorRoom[] = [
     routeHintEn: "Elevator to 3F → south-east wing",
     matchTokens: ["тьютор", "медпункт", "куратор"],
     rect: { x: 444, y: 218, w: 230, h: 108 },
-    pathPoints: "360,326 360,180 560,180 560,218",
+    doorSide: "top",
+    motif: "service",
+    pathPoints: "360,322 360,180 560,180 560,218",
+    destPoint: { x: 560, y: 218 },
   },
 
   // NEW WING — FLOOR 1
@@ -364,7 +410,10 @@ const ROOMS: FloorRoom[] = [
     routeHintEn: "Skybridge from Main Wing → 1F → straight under glass dome",
     matchTokens: ["зал № 4", "зал 4", "hall #4", "hall 4"],
     rect: { x: 46, y: 34, w: 380, h: 120 },
-    pathPoints: "360,326 360,184 236,184 236,154",
+    doorSide: "bottom",
+    motif: "amphitheater",
+    pathPoints: "360,322 360,184 236,184 236,154",
+    destPoint: { x: 236, y: 154 },
   },
   {
     id: "new-mfc",
@@ -383,7 +432,10 @@ const ROOMS: FloorRoom[] = [
     routeHintEn: "New Wing lobby, east side",
     matchTokens: ["мфц", "kiosk", "сервис"],
     rect: { x: 450, y: 34, w: 224, h: 120 },
-    pathPoints: "360,326 360,184 562,184 562,154",
+    doorSide: "bottom",
+    motif: "service",
+    pathPoints: "360,322 360,184 562,184 562,154",
+    destPoint: { x: 562, y: 154 },
   },
   {
     id: "new-atrium",
@@ -402,7 +454,10 @@ const ROOMS: FloorRoom[] = [
     routeHintEn: "Central Atrium of New Wing",
     matchTokens: ["атриум", "форум", "atrium"],
     rect: { x: 46, y: 218, w: 230, h: 108 },
-    pathPoints: "360,326 360,184 160,184 160,218",
+    doorSide: "top",
+    motif: "amphitheater",
+    pathPoints: "360,322 360,184 160,184 160,218",
+    destPoint: { x: 160, y: 218 },
   },
 
   // NEW WING — UPPER FLOORS (3-5)
@@ -423,7 +478,10 @@ const ROOMS: FloorRoom[] = [
     routeHintEn: "New Wing Lift → 3F → West Wing",
     matchTokens: ["3102"],
     rect: { x: 46, y: 34, w: 196, h: 112 },
-    pathPoints: "360,326 360,180 144,180 144,146",
+    doorSide: "bottom",
+    motif: "amphitheater",
+    pathPoints: "360,322 360,180 144,180 144,146",
+    destPoint: { x: 144, y: 146 },
   },
   {
     id: "new-402",
@@ -442,7 +500,9 @@ const ROOMS: FloorRoom[] = [
     routeHintEn: "New Wing Lift → 4F → center",
     matchTokens: ["402"],
     rect: { x: 262, y: 34, w: 196, h: 112 },
-    pathPoints: "360,326 360,180 360,146",
+    doorSide: "bottom",
+    pathPoints: "360,322 360,180 360,146",
+    destPoint: { x: 360, y: 146 },
   },
   {
     id: "new-520",
@@ -461,7 +521,9 @@ const ROOMS: FloorRoom[] = [
     routeHintEn: "New Wing Lift → 5F → East Wing",
     matchTokens: ["520"],
     rect: { x: 478, y: 34, w: 196, h: 112 },
-    pathPoints: "360,326 360,180 576,180 576,146",
+    doorSide: "bottom",
+    pathPoints: "360,322 360,180 576,180 576,146",
+    destPoint: { x: 576, y: 146 },
   },
 
   // TECH & LAW HUB — FLOORS 1-2
@@ -482,7 +544,9 @@ const ROOMS: FloorRoom[] = [
     routeHintEn: "Tech & Law Entrance → straight left",
     matchTokens: ["114", "109"],
     rect: { x: 46, y: 34, w: 196, h: 112 },
-    pathPoints: "360,326 360,180 144,180 144,146",
+    doorSide: "bottom",
+    pathPoints: "360,322 360,180 144,180 144,146",
+    destPoint: { x: 144, y: 146 },
   },
   {
     id: "tech-116",
@@ -501,7 +565,9 @@ const ROOMS: FloorRoom[] = [
     routeHintEn: "Tech & Law Entrance → 1F center",
     matchTokens: ["116"],
     rect: { x: 262, y: 34, w: 196, h: 112 },
-    pathPoints: "360,326 360,180 360,146",
+    doorSide: "bottom",
+    pathPoints: "360,322 360,180 360,146",
+    destPoint: { x: 360, y: 146 },
   },
   {
     id: "tech-208",
@@ -520,7 +586,9 @@ const ROOMS: FloorRoom[] = [
     routeHintEn: "Stairs to 2F → turn right",
     matchTokens: ["208"],
     rect: { x: 478, y: 34, w: 196, h: 112 },
-    pathPoints: "360,326 360,180 576,180 576,146",
+    doorSide: "bottom",
+    pathPoints: "360,322 360,180 576,180 576,146",
+    destPoint: { x: 576, y: 146 },
   },
   {
     id: "tech-219",
@@ -539,7 +607,10 @@ const ROOMS: FloorRoom[] = [
     routeHintEn: "Stairs to 2F → West Wing",
     matchTokens: ["219"],
     rect: { x: 46, y: 218, w: 230, h: 108 },
-    pathPoints: "360,326 360,180 160,180 160,218",
+    doorSide: "top",
+    motif: "moot",
+    pathPoints: "360,322 360,180 160,180 160,218",
+    destPoint: { x: 160, y: 218 },
   },
 
   // TECH & LAW HUB — FLOORS 3-5
@@ -560,7 +631,9 @@ const ROOMS: FloorRoom[] = [
     routeHintEn: "Tech Hub Lift → 3F → turn left",
     matchTokens: ["301"],
     rect: { x: 46, y: 34, w: 295, h: 112 },
-    pathPoints: "360,326 360,180 194,180 194,146",
+    doorSide: "bottom",
+    pathPoints: "360,322 360,180 194,180 194,146",
+    destPoint: { x: 194, y: 146 },
   },
   {
     id: "tech-501",
@@ -571,15 +644,18 @@ const ROOMS: FloorRoom[] = [
     name: "Компьютерная лаборатория анализа данных 501",
     nameEn: "Quantitative Data & AI Lab 501",
     category: "lab",
-    capacity: "26 рабочих станций",
-    capacityEn: "26 workstations",
+    capacity: "26 станций",
+    capacityEn: "26 stations",
     equipment: ["Двойные мониторы", "Python / R / SQL", "Гигабитная сеть"],
     equipmentEn: ["Dual Monitors", "Python / R / SQL", "1Gbps Ethernet"],
     routeHint: "Лифт Корпуса C → 5 этаж → правое крыло",
     routeHintEn: "Tech Hub Lift → 5F → East Wing",
     matchTokens: ["501", "лаб"],
     rect: { x: 365, y: 34, w: 309, h: 112 },
-    pathPoints: "360,326 360,180 520,180 520,146",
+    doorSide: "bottom",
+    motif: "workstations",
+    pathPoints: "360,322 360,180 520,180 520,146",
+    destPoint: { x: 520, y: 146 },
   },
 ];
 
@@ -605,12 +681,16 @@ export function CampusMapSection({
   const [query, setQuery] = useState("");
   const [showRoute, setShowRoute] = useState(true);
 
+  const floorStageRef = useRef<HTMLDivElement | null>(null);
+  const routePathRef = useRef<SVGPolylineElement | null>(null);
+  const routeBeaconRef = useRef<SVGCircleElement | null>(null);
+  const inspectorRef = useRef<HTMLDivElement | null>(null);
+
   const roomMatchesSchedule = (room: FloorRoom, item: ScheduleItem) => {
     const hay = `${item.room} ${item.originalRoom ?? ""}`.toLowerCase();
     return room.matchTokens.some((token) => hay.includes(token.toLowerCase()));
   };
 
-  // Focus a specific room if navigated from Next Class or Schedule
   useEffect(() => {
     if (!focusRoomQuery) return;
     const normalized = focusRoomQuery.toLowerCase();
@@ -627,7 +707,87 @@ export function CampusMapSection({
     }
   }, [focusRoomQuery]);
 
-  // Search jump across all buildings/floors
+  // Animate floor blueprint transitions smoothly when building, floor, or category filter changes
+  useEffect(() => {
+    const el = floorStageRef.current;
+    if (!el) return;
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+
+    const ctx = gsap.context(() => {
+      gsap.fromTo(
+        el,
+        { opacity: 0.35, y: 10, scale: 0.985 },
+        {
+          opacity: 1,
+          y: 0,
+          scale: 1,
+          duration: 0.36,
+          ease: "power3.out",
+          clearProps: "transform",
+        }
+      );
+
+      const roomNodes = el.querySelectorAll(".map-room-node");
+      if (roomNodes.length > 0) {
+        gsap.fromTo(
+          roomNodes,
+          { opacity: 0, scale: 0.94, transformOrigin: "center center" },
+          {
+            opacity: 1,
+            scale: 1,
+            duration: 0.32,
+            stagger: 0.04,
+            ease: "power2.out",
+            clearProps: "transform",
+          }
+        );
+      }
+    }, floorStageRef);
+
+    return () => ctx.revert();
+  }, [buildingId, floor, categoryFilter]);
+
+  // Animate route trace + inspector panel whenever selected room or route visibility changes
+  useEffect(() => {
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+
+    const ctx = gsap.context(() => {
+      const poly = routePathRef.current;
+      const beacon = routeBeaconRef.current;
+      if (poly && showRoute) {
+        const len = poly.getTotalLength ? poly.getTotalLength() : 520;
+        gsap.fromTo(
+          poly,
+          { strokeDasharray: `${len}`, strokeDashoffset: len },
+          {
+            strokeDashoffset: 0,
+            duration: 0.55,
+            ease: "power2.out",
+            onComplete: () => {
+              poly.style.strokeDasharray = "8 6";
+            },
+          }
+        );
+      }
+      if (beacon && showRoute) {
+        gsap.fromTo(
+          beacon,
+          { scale: 0.4, opacity: 0, transformOrigin: "center center" },
+          { scale: 1, opacity: 1, duration: 0.45, delay: 0.25, ease: "back.out(2)" }
+        );
+      }
+      if (inspectorRef.current) {
+        gsap.fromTo(
+          inspectorRef.current,
+          { opacity: 0.4, y: 8 },
+          { opacity: 1, y: 0, duration: 0.26, ease: "power2.out", clearProps: "transform" }
+        );
+      }
+    });
+
+    return () => ctx.revert();
+  }, [selectedRoomId, showRoute, buildingId, floor]);
+
   const searchMatches = useMemo(() => {
     const q = query.trim().toLowerCase();
     if (!q) return [];
@@ -698,18 +858,18 @@ export function CampusMapSection({
       return cat === "hall"
         ? "Зал"
         : cat === "lab"
-          ? "Лаборатория"
+          ? "Лаб."
           : cat === "service"
-            ? "Деканат / Сервис"
-            : "Аудитория";
+            ? "Сервис"
+            : "Ауд.";
     }
     return cat === "hall"
-      ? "Auditorium Hall"
+      ? "Hall"
       : cat === "lab"
         ? "Lab"
         : cat === "service"
-          ? "Service / Dean"
-          : "Classroom";
+          ? "Service"
+          : "Room";
   };
 
   const floorLabel = (b: BuildingMeta, fl: number) => {
@@ -719,37 +879,92 @@ export function CampusMapSection({
     if (fl === 1) {
       return b.id === "tech_hub"
         ? lang === "ru"
-          ? "1–2 этажи"
+          ? "1–2 эт."
           : "1–2F"
         : lang === "ru"
           ? "1 этаж"
           : "1F";
     }
-    return lang === "ru" ? "3–5 этажи" : "3–5F";
+    return lang === "ru" ? "3–5 эт." : "3–5F";
+  };
+
+  const renderRoomMotif = (room: FloorRoom, isSelected: boolean) => {
+    const stroke = isSelected ? "rgba(255,255,255,0.22)" : "rgba(27,75,138,0.16)";
+    const cx = room.rect.x + room.rect.w - 42;
+    const cy = room.rect.y + 42;
+
+    if (room.motif === "amphitheater") {
+      return (
+        <g pointerEvents="none" opacity="0.9">
+          <path d={`M ${cx - 24} ${cy - 8} A 24 18 0 0 0 ${cx + 24} ${cy - 8}`} fill="none" stroke={stroke} strokeWidth="1.6" />
+          <path d={`M ${cx - 17} ${cy - 1} A 17 12 0 0 0 ${cx + 17} ${cy - 1}`} fill="none" stroke={stroke} strokeWidth="1.6" />
+          <path d={`M ${cx - 10} ${cy + 6} A 10 7 0 0 0 ${cx + 10} ${cy + 6}`} fill="none" stroke={stroke} strokeWidth="1.6" />
+        </g>
+      );
+    }
+    if (room.motif === "workstations") {
+      return (
+        <g pointerEvents="none" opacity="0.9">
+          {[0, 1].map((r) =>
+            [0, 1, 2].map((c) => (
+              <rect
+                key={`${r}-${c}`}
+                x={cx - 24 + c * 16}
+                y={cy - 12 + r * 14}
+                width="10"
+                height="7"
+                rx="2"
+                fill="none"
+                stroke={stroke}
+                strokeWidth="1.3"
+              />
+            ))
+          )}
+        </g>
+      );
+    }
+    if (room.motif === "moot") {
+      return (
+        <g pointerEvents="none" opacity="0.9">
+          <rect x={cx - 18} y={cy - 14} width="36" height="8" rx="3" fill="none" stroke={stroke} strokeWidth="1.5" />
+          <rect x={cx - 18} y={cy} width="14" height="12" rx="2" fill="none" stroke={stroke} strokeWidth="1.3" />
+          <rect x={cx + 4} y={cy} width="14" height="12" rx="2" fill="none" stroke={stroke} strokeWidth="1.3" />
+        </g>
+      );
+    }
+    if (room.motif === "service") {
+      return (
+        <g pointerEvents="none" opacity="0.9">
+          <circle cx={cx} cy={cy - 2} r="13" fill="none" stroke={stroke} strokeWidth="1.4" strokeDasharray="3 3" />
+          <circle cx={cx} cy={cy - 2} r="4" fill={isSelected ? "#DFB863" : "#C49A45"} fillOpacity="0.65" />
+        </g>
+      );
+    }
+    return null;
   };
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-4 sm:space-y-5 min-w-0">
       {/* Header & Search */}
       <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-3">
-        <div>
-          <p className="text-xs font-mono uppercase tracking-widest text-[var(--accent)] flex items-center gap-1.5">
-            <Compass className="w-3.5 h-3.5" />
-            {lang === "ru" ? "Интерактивный навигатор" : "Interactive Campus Navigator"}
+        <div className="min-w-0">
+          <p className="text-[11px] font-mono uppercase tracking-widest text-[var(--accent)] flex items-center gap-1.5">
+            <Compass className="w-3.5 h-3.5 shrink-0" />
+            {lang === "ru" ? "Архитектурный навигатор" : "Architectural Campus Navigator"}
           </p>
-          <h1 className="font-serif text-2xl sm:text-3xl font-semibold mt-1">
+          <h1 className="font-serif text-2xl sm:text-3xl font-semibold mt-1 leading-tight">
             {lang === "ru"
-              ? "Карта кампуса, корпусов и аудиторий"
-              : "Campus, Buildings & Room Floor Plans"}
+              ? "Карта кампуса и аудиторий"
+              : "Campus & Floor Blueprint"}
           </h1>
           <p className="text-xs text-[var(--text-secondary)] mt-1">
             {lang === "ru"
-              ? "Кликайте по корпусам и аудиториям: показаны маршруты от входа и ваши текущие пары"
-              : "Click any building or room to inspect seating, live scheduled classes, and walking route"}
+              ? "Живая привязка к парам и переносам · анимированные маршруты от входа"
+              : "Synced with live classes & room transfers · animated indoor wayfinding"}
           </p>
         </div>
 
-        <div className="relative w-full sm:w-72">
+        <div className="relative w-full sm:w-72 shrink-0">
           <Search className="w-4 h-4 text-[var(--text-secondary)] absolute left-3 top-1/2 -translate-y-1/2" />
           <input
             type="text"
@@ -757,10 +972,10 @@ export function CampusMapSection({
             onChange={(e) => setQuery(e.target.value)}
             placeholder={
               lang === "ru"
-                ? "Найти: 214, Зал № 4, 308, Лаб. 501..."
-                : "Find room: 214, Hall #4, 308, Lab 501..."
+                ? "Найти: 214, Зал № 4, 308, 501..."
+                : "Find: 214, Hall #4, 308, Lab 501..."
             }
-            className="w-full rounded-2xl bg-[var(--bg-surface)] border border-[var(--border-color)] pl-9 pr-3 py-2 text-xs outline-none focus:ring-1 focus:ring-[var(--accent)]"
+            className="w-full rounded-2xl bg-[var(--bg-surface)] border border-[var(--border-color)] pl-9 pr-3 py-2.5 text-xs outline-none focus:ring-1 focus:ring-[var(--accent)] shadow-sm"
           />
           {searchMatches.length > 0 && (
             <div className="absolute left-0 right-0 top-full mt-1.5 z-20 rounded-2xl bg-[var(--bg-surface)] border border-[var(--border-color)] shadow-xl p-1.5 max-h-56 overflow-y-auto">
@@ -782,7 +997,7 @@ export function CampusMapSection({
                       {lang === "ru" ? r.code : r.codeEn}
                     </span>
                     <span className="text-[11px] text-[var(--text-secondary)] shrink-0">
-                      {lang === "ru" ? b?.name : b?.nameEn}
+                      {lang === "ru" ? b?.shortName : b?.shortNameEn}
                     </span>
                   </button>
                 );
@@ -792,176 +1007,287 @@ export function CampusMapSection({
         </div>
       </div>
 
-      {/* Campus Master Plan Card */}
-      <div className="stagger-item rounded-3xl bg-[var(--bg-surface)] border border-[var(--border-color)] p-4 sm:p-5 shadow-sm space-y-4">
+      {/* SECTION 1: PREMIUM CAMPUS MASTER PLAN */}
+      <div className="stagger-item rounded-3xl bg-[var(--bg-surface)] border border-[var(--border-color)] p-3.5 sm:p-5 shadow-sm space-y-3.5 min-w-0 overflow-hidden">
         <div className="flex flex-wrap items-center justify-between gap-2">
-          <div className="flex items-center gap-2">
-            <Building2 className="w-4 h-4 text-[var(--accent)]" />
-            <h2 className="text-sm font-semibold">
-              {lang === "ru" ? "1. Схема кампуса (выберите корпус)" : "1. Campus Master Plan (select wing)"}
-            </h2>
+          <div className="flex items-center gap-2 min-w-0">
+            <div className="p-1.5 rounded-xl bg-[#0D1B2A] dark:bg-[#1B4B8A] text-[#DFB863] shrink-0">
+              <Building2 className="w-4 h-4" />
+            </div>
+            <div className="min-w-0">
+              <h2 className="text-sm font-semibold truncate">
+                {lang === "ru" ? "1. Схема кампуса" : "1. Campus Master Plan"}
+              </h2>
+              <p className="text-[11px] text-[var(--text-secondary)] truncate">
+                {lang === "ru"
+                  ? "Нажмите на любой корпус на схеме или ниже"
+                  : "Tap a building on the blueprint or selector"}
+              </p>
+            </div>
           </div>
-          <span className="inline-flex items-center gap-1.5 text-[11px] text-[var(--text-secondary)] px-2.5 py-1 rounded-full bg-[var(--bg-page)] border border-[var(--border-color)]">
+
+          <span className="hidden sm:inline-flex items-center gap-1.5 text-[10px] font-mono uppercase tracking-wider text-[var(--text-secondary)] px-2.5 py-1 rounded-full bg-[var(--bg-page)] border border-[var(--border-color)]">
             <Sparkles className="w-3 h-3 text-[#C49A45]" />
-            {lang === "ru"
-              ? "Концептуальная схема · привязана к вашему расписанию"
-              : "Architectural blueprint · synced with live schedule"}
+            {lang === "ru" ? "Демо-схема 3 корпусов" : "3-Wing Blueprint"}
           </span>
         </div>
 
+        {/* Mobile-Friendly Quick Building Switcher Strip */}
+        <div className="grid grid-cols-3 gap-1.5 lg:hidden">
+          {BUILDINGS.map((b) => {
+            const active = b.id === buildingId;
+            const stats = getBuildingClassStats(b.id);
+            return (
+              <button
+                key={b.id}
+                type="button"
+                onClick={() => selectBuilding(b.id)}
+                className={`min-w-0 rounded-2xl px-2.5 py-2 text-left border transition-all ${
+                  active
+                    ? "bg-[#0D1B2A] dark:bg-[#1B4B8A] text-white border-[#C49A45]/70 shadow-sm"
+                    : "bg-[var(--bg-page)] border-[var(--border-color)]"
+                }`}
+              >
+                <div className="flex items-center justify-between gap-1">
+                  <span
+                    className={`w-5 h-5 rounded-md font-mono text-[10px] font-bold flex items-center justify-center shrink-0 ${
+                      active
+                        ? "bg-[#C49A45] text-[#0D1B2A]"
+                        : "bg-[var(--bg-subtle)] text-[var(--accent)]"
+                    }`}
+                  >
+                    {b.code}
+                  </span>
+                  {stats.changes > 0 && (
+                    <span className="w-2 h-2 rounded-full bg-amber-400 animate-pulse shrink-0" />
+                  )}
+                </div>
+                <p className="text-[11px] font-semibold mt-1 truncate">
+                  {lang === "ru" ? b.name : b.nameEn}
+                </p>
+                <p
+                  className={`text-[9.5px] font-mono truncate ${
+                    active ? "text-white/75" : "text-[var(--text-secondary)]"
+                  }`}
+                >
+                  {lang === "ru" ? `${stats.total} пар` : `${stats.total} cls`}
+                </p>
+              </button>
+            );
+          })}
+        </div>
+
         <div className="grid lg:grid-cols-12 gap-4 items-center">
-          {/* Interactive SVG Site Plan */}
-          <div className="lg:col-span-7 rounded-2xl bg-[#0D1B2A] text-white p-3 sm:p-4 border border-[#C49A45]/25 relative overflow-hidden">
+          {/* Interactive Architectural Site Blueprint */}
+          <div className="lg:col-span-7 rounded-2xl bg-gradient-to-br from-[#091423] via-[#0D1B2A] to-[#122640] text-white p-2.5 sm:p-4 border border-[#C49A45]/30 relative overflow-hidden shadow-inner">
             <svg
-              viewBox="0 0 640 225"
+              viewBox="0 0 640 245"
               className="w-full h-auto block select-none"
               role="img"
-              aria-label={lang === "ru" ? "Схема корпусов кампуса" : "Campus buildings blueprint"}
+              aria-label={lang === "ru" ? "Архитектурная схема кампуса" : "Architectural campus blueprint"}
             >
-              {/* Subtle blueprint grid */}
               <defs>
-                <pattern id="campusGrid" width="24" height="24" patternUnits="userSpaceOnUse">
+                <pattern id="siteGridMinor" width="16" height="16" patternUnits="userSpaceOnUse">
                   <path
-                    d="M 24 0 L 0 0 0 24"
+                    d="M 16 0 L 0 0 0 16"
                     fill="none"
-                    stroke="rgba(255,255,255,0.05)"
+                    stroke="rgba(148,163,184,0.06)"
+                    strokeWidth="0.8"
+                  />
+                </pattern>
+                <pattern id="siteGridMajor" width="64" height="64" patternUnits="userSpaceOnUse">
+                  <rect width="64" height="64" fill="url(#siteGridMinor)" />
+                  <path
+                    d="M 64 0 L 0 0 0 64"
+                    fill="none"
+                    stroke="rgba(196,154,69,0.12)"
                     strokeWidth="1"
                   />
                 </pattern>
+                <radialGradient id="activeGlow" cx="50%" cy="50%" r="55%">
+                  <stop offset="0%" stopColor="#3B82F6" stopOpacity="0.32" />
+                  <stop offset="100%" stopColor="#3B82F6" stopOpacity="0" />
+                </radialGradient>
+                <linearGradient id="wingActiveGrad" x1="0" y1="0" x2="1" y2="1">
+                  <stop offset="0%" stopColor="#1E5296" />
+                  <stop offset="100%" stopColor="#123462" />
+                </linearGradient>
+                <linearGradient id="wingIdleGrad" x1="0" y1="0" x2="1" y2="1">
+                  <stop offset="0%" stopColor="#162A44" />
+                  <stop offset="100%" stopColor="#101F34" />
+                </linearGradient>
               </defs>
-              <rect width="640" height="225" rx="14" fill="url(#campusGrid)" />
 
-              {/* Courtyard & Pathways */}
+              {/* Blueprint background */}
+              <rect width="640" height="245" rx="14" fill="url(#siteGridMajor)" />
+
+              {/* Landscape Courtyard / Trees Silhouettes */}
+              <ellipse cx="320" cy="176" rx="135" ry="38" fill="rgba(16,185,129,0.06)" stroke="rgba(16,185,129,0.18)" strokeWidth="1" />
+              <circle cx="242" cy="174" r="10" fill="rgba(16,185,129,0.14)" />
+              <circle cx="398" cy="172" r="12" fill="rgba(16,185,129,0.14)" />
+              <circle cx="424" cy="186" r="8" fill="rgba(16,185,129,0.12)" />
+
+              {/* Pedestrian Walkways */}
               <path
-                d="M 85 186 Q 210 155 320 155 T 540 165"
+                d="M 96 200 C 165 182, 235 170, 320 170 C 410 170, 485 174, 544 156"
                 fill="none"
-                stroke="rgba(196,154,69,0.45)"
-                strokeWidth="3"
+                stroke="#C49A45"
+                strokeOpacity="0.5"
+                strokeWidth="2.5"
                 strokeDasharray="6 5"
               />
-              <circle cx="320" cy="155" r="24" fill="rgba(27,75,138,0.28)" stroke="rgba(196,154,69,0.45)" />
-              <text x="320" y="159" textAnchor="middle" fill="#DFB863" fontSize="9" fontFamily="monospace">
+              <path
+                d="M 130 132 L 130 185 M 364 128 L 364 170 M 544 148 L 544 170"
+                fill="none"
+                stroke="rgba(196,154,69,0.4)"
+                strokeWidth="2"
+              />
+
+              {/* Central Fountain / Plaza */}
+              <circle cx="320" cy="170" r="24" fill="#0F233D" stroke="rgba(196,154,69,0.55)" strokeWidth="1.5" />
+              <circle cx="320" cy="170" r="16" fill="none" stroke="rgba(96,165,250,0.35)" strokeWidth="1" strokeDasharray="3 3" />
+              <text x="320" y="173" textAnchor="middle" fill="#FDE68A" fontSize="8.5" fontWeight="700" fontFamily="monospace">
                 {lang === "ru" ? "СКВЕР" : "PLAZA"}
               </text>
 
-              {/* Skybridge between Main & New Wing */}
-              <rect
-                x="232"
-                y="62"
-                width="44"
-                height="20"
-                rx="4"
-                fill="rgba(77,141,246,0.28)"
-                stroke="#60A5FA"
-                strokeWidth="1.2"
-              />
-              <text x="254" y="75" textAnchor="middle" fill="#BAE6FD" fontSize="7.5" fontFamily="monospace">
-                {lang === "ru" ? "ПЕРЕХОД" : "BRIDGE"}
-              </text>
-
-              {/* Building A: Main */}
-              <g
-                onClick={() => selectBuilding("main")}
-                className="cursor-pointer transition-opacity hover:opacity-95"
-              >
+              {/* Glazed Skybridge A <-> B */}
+              <g>
                 <rect
-                  x="26"
-                  y="30"
-                  width="206"
-                  height="96"
-                  rx="14"
-                  fill={buildingId === "main" ? "#1B4B8A" : "#152841"}
-                  stroke={buildingId === "main" ? "#DFB863" : "rgba(255,255,255,0.28)"}
-                  strokeWidth={buildingId === "main" ? "2.5" : "1.2"}
+                  x="230"
+                  y="68"
+                  width="46"
+                  height="22"
+                  rx="4"
+                  fill="rgba(56,189,248,0.22)"
+                  stroke="#7DD3FC"
+                  strokeWidth="1.4"
                 />
-                <text x="42" y="54" fill="#DFB863" fontSize="10" fontWeight="700" fontFamily="monospace">
-                  {lang === "ru" ? "КОРПУС A" : "WING A"}
-                </text>
-                <text x="42" y="74" fill="#FFFFFF" fontSize="13.5" fontWeight="700">
-                  {lang === "ru" ? "Главный корпус" : "Main Building"}
-                </text>
-                <text x="42" y="92" fill="rgba(255,255,255,0.75)" fontSize="9.5">
-                  {lang === "ru" ? "Деканат 214 · Зал судеб. 1 · 308" : "Dean Rm. 214 · Moot · 308"}
-                </text>
-                <text x="42" y="110" fill="#93C5FD" fontSize="9" fontFamily="monospace">
-                  {lang === "ru"
-                    ? `Пар по расп.: ${getBuildingClassStats("main").total}`
-                    : `Classes: ${getBuildingClassStats("main").total}`}
+                <line x1="236" y1="74" x2="270" y2="74" stroke="rgba(186,230,253,0.45)" strokeWidth="1" />
+                <line x1="236" y1="84" x2="270" y2="84" stroke="rgba(186,230,253,0.45)" strokeWidth="1" />
+                <text x="253" y="61" textAnchor="middle" fill="#BAE6FD" fontSize="7.5" fontWeight="700" fontFamily="monospace">
+                  {lang === "ru" ? "ГАЛЕРЕЯ" : "BRIDGE"}
                 </text>
               </g>
 
-              {/* Building B: New Wing */}
-              <g
-                onClick={() => selectBuilding("new_wing")}
-                className="cursor-pointer transition-opacity hover:opacity-95"
-              >
+              {/* BUILDING A — MAIN */}
+              <g onClick={() => selectBuilding("main")} className="cursor-pointer">
+                {buildingId === "main" && <ellipse cx="130" cy="84" rx="125" ry="70" fill="url(#activeGlow)" />}
+                {/* 2.5D Extruded Base Shadow */}
+                <rect x="30" y="38" width="204" height="98" rx="14" fill="#050B14" opacity="0.65" />
+                {/* Building Roof / Volume */}
+                <rect
+                  x="24"
+                  y="30"
+                  width="206"
+                  height="98"
+                  rx="14"
+                  fill={buildingId === "main" ? "url(#wingActiveGrad)" : "url(#wingIdleGrad)"}
+                  stroke={buildingId === "main" ? "#DFB863" : "rgba(255,255,255,0.28)"}
+                  strokeWidth={buildingId === "main" ? "2.6" : "1.2"}
+                />
+                {/* Architectural Wing Detail */}
+                <rect x="36" y="42" width="182" height="74" rx="9" fill="none" stroke="rgba(255,255,255,0.12)" strokeDasharray="4 4" />
+                <rect x="36" y="40" width="66" height="17" rx="5" fill="#C49A45" />
+                <text x="69" y="52" textAnchor="middle" fill="#0D1B2A" fontSize="9" fontWeight="800" fontFamily="monospace">
+                  {lang === "ru" ? "КОРПУС A" : "WING A"}
+                </text>
+                <text x="38" y="75" fill="#FFFFFF" fontSize="14" fontWeight="700">
+                  {lang === "ru" ? "Главный корпус" : "Main Wing"}
+                </text>
+                <text x="38" y="92" fill="rgba(226,232,240,0.82)" fontSize="9.5">
+                  {lang === "ru" ? "Деканат 214 · Залы · Библиотека" : "Dean 214 · Moot · Library"}
+                </text>
+                <text x="38" y="110" fill="#93C5FD" fontSize="9" fontFamily="monospace">
+                  {lang === "ru"
+                    ? `● Пар по расп.: ${getBuildingClassStats("main").total}`
+                    : `● Active classes: ${getBuildingClassStats("main").total}`}
+                </text>
+              </g>
+
+              {/* BUILDING B — NEW WING */}
+              <g onClick={() => selectBuilding("new_wing")} className="cursor-pointer">
+                {buildingId === "new_wing" && <ellipse cx="364" cy="76" rx="115" ry="66" fill="url(#activeGlow)" />}
+                <rect x="282" y="32" width="174" height="94" rx="14" fill="#050B14" opacity="0.65" />
                 <rect
                   x="276"
                   y="24"
                   width="176"
-                  height="92"
+                  height="94"
                   rx="14"
-                  fill={buildingId === "new_wing" ? "#1B4B8A" : "#152841"}
+                  fill={buildingId === "new_wing" ? "url(#wingActiveGrad)" : "url(#wingIdleGrad)"}
                   stroke={buildingId === "new_wing" ? "#DFB863" : "rgba(255,255,255,0.28)"}
-                  strokeWidth={buildingId === "new_wing" ? "2.5" : "1.2"}
+                  strokeWidth={buildingId === "new_wing" ? "2.6" : "1.2"}
                 />
-                <text x="290" y="48" fill="#DFB863" fontSize="10" fontWeight="700" fontFamily="monospace">
+                {/* Skylight Dome Accent */}
+                <circle cx="424" cy="48" r="14" fill="rgba(96,165,250,0.16)" stroke="rgba(147,197,253,0.45)" strokeWidth="1" />
+                <rect x="288" y="34" width="66" height="17" rx="5" fill="#C49A45" />
+                <text x="321" y="46" textAnchor="middle" fill="#0D1B2A" fontSize="9" fontWeight="800" fontFamily="monospace">
                   {lang === "ru" ? "КОРПУС B" : "WING B"}
                 </text>
-                <text x="290" y="67" fill="#FFFFFF" fontSize="13.5" fontWeight="700">
+                <text x="290" y="69" fill="#FFFFFF" fontSize="14" fontWeight="700">
                   {lang === "ru" ? "Новый корпус" : "New Wing"}
                 </text>
-                <text x="290" y="84" fill="rgba(255,255,255,0.75)" fontSize="9.5">
-                  {lang === "ru" ? "Зал № 4 · МФЦ · 3102" : "Hall #4 · Hub · 3102"}
+                <text x="290" y="86" fill="rgba(226,232,240,0.82)" fontSize="9.5">
+                  {lang === "ru" ? "Зал № 4 · МФЦ · 3102–520" : "Hall #4 · Hub · 3102–520"}
                 </text>
-                <text x="290" y="102" fill="#FDE68A" fontSize="9" fontFamily="monospace">
+                <text x="290" y="104" fill="#FDE68A" fontSize="9" fontFamily="monospace">
                   {lang === "ru"
-                    ? `Переносов: ${getBuildingClassStats("new_wing").changes}`
-                    : `Moved here: ${getBuildingClassStats("new_wing").changes}`}
+                    ? `★ Переносов сюда: ${getBuildingClassStats("new_wing").changes}`
+                    : `★ Moved here: ${getBuildingClassStats("new_wing").changes}`}
                 </text>
               </g>
 
-              {/* Building C: Tech & Law Hub */}
-              <g
-                onClick={() => selectBuilding("tech_hub")}
-                className="cursor-pointer transition-opacity hover:opacity-95"
-              >
+              {/* BUILDING C — TECH & LAW */}
+              <g onClick={() => selectBuilding("tech_hub")} className="cursor-pointer">
+                {buildingId === "tech_hub" && <ellipse cx="546" cy="96" rx="100" ry="66" fill="url(#activeGlow)" />}
+                <rect x="478" y="48" width="142" height="102" rx="14" fill="#050B14" opacity="0.65" />
                 <rect
                   x="472"
                   y="40"
                   width="144"
-                  height="104"
+                  height="102"
                   rx="14"
-                  fill={buildingId === "tech_hub" ? "#1B4B8A" : "#152841"}
+                  fill={buildingId === "tech_hub" ? "url(#wingActiveGrad)" : "url(#wingIdleGrad)"}
                   stroke={buildingId === "tech_hub" ? "#DFB863" : "rgba(255,255,255,0.28)"}
-                  strokeWidth={buildingId === "tech_hub" ? "2.5" : "1.2"}
+                  strokeWidth={buildingId === "tech_hub" ? "2.6" : "1.2"}
                 />
-                <text x="486" y="64" fill="#DFB863" fontSize="10" fontWeight="700" fontFamily="monospace">
+                <rect x="484" y="50" width="66" height="17" rx="5" fill="#C49A45" />
+                <text x="517" y="62" textAnchor="middle" fill="#0D1B2A" fontSize="9" fontWeight="800" fontFamily="monospace">
                   {lang === "ru" ? "КОРПУС C" : "WING C"}
                 </text>
-                <text x="486" y="83" fill="#FFFFFF" fontSize="13" fontWeight="700">
+                <text x="486" y="85" fill="#FFFFFF" fontSize="13.5" fontWeight="700">
                   {lang === "ru" ? "Право и ИТ" : "Tech & Law"}
                 </text>
-                <text x="486" y="100" fill="rgba(255,255,255,0.75)" fontSize="9.5">
+                <text x="486" y="102" fill="rgba(226,232,240,0.82)" fontSize="9.5">
                   {lang === "ru" ? "Лаб. 501 · 114 · 301" : "Lab 501 · 114 · 301"}
                 </text>
-                <text x="486" y="120" fill="#93C5FD" fontSize="9" fontFamily="monospace">
+                <text x="486" y="122" fill="#93C5FD" fontSize="9" fontFamily="monospace">
                   {lang === "ru"
-                    ? `Пар: ${getBuildingClassStats("tech_hub").total}`
-                    : `Classes: ${getBuildingClassStats("tech_hub").total}`}
+                    ? `● Пар: ${getBuildingClassStats("tech_hub").total}`
+                    : `● Classes: ${getBuildingClassStats("tech_hub").total}`}
                 </text>
               </g>
 
               {/* Main Gate Marker */}
-              <rect x="30" y="176" width="142" height="32" rx="8" fill="rgba(196,154,69,0.22)" stroke="#C49A45" />
-              <text x="101" y="196" textAnchor="middle" fill="#FDE68A" fontSize="9.5" fontWeight="700">
-                {lang === "ru" ? "КПП · Вход с проспекта" : "MAIN GATE · Metro Walk"}
+              <rect x="24" y="192" width="156" height="34" rx="9" fill="rgba(196,154,69,0.18)" stroke="#C49A45" strokeWidth="1.2" />
+              <circle cx="40" cy="209" r="4" fill="#34D399" />
+              <text x="108" y="213" textAnchor="middle" fill="#FDE68A" fontSize="9.5" fontWeight="700">
+                {lang === "ru" ? "КПП · Проспект / Метро" : "MAIN GATE · Metro Walk"}
               </text>
+
+              {/* Compass Rose */}
+              <g transform="translate(598, 206)">
+                <circle r="18" fill="rgba(255,255,255,0.04)" stroke="rgba(196,154,69,0.4)" strokeWidth="1" />
+                <polygon points="0,-13 3.5,-3 0,-5 -3.5,-3" fill="#DFB863" />
+                <text y="10" textAnchor="middle" fill="rgba(255,255,255,0.6)" fontSize="8" fontFamily="monospace">
+                  N
+                </text>
+              </g>
             </svg>
           </div>
 
-          {/* 3 Building Selector Cards */}
-          <div className="lg:col-span-5 grid gap-2.5">
+          {/* Desktop 3-Building Cards */}
+          <div className="hidden lg:grid lg:col-span-5 gap-2.5">
             {BUILDINGS.map((b) => {
               const active = b.id === buildingId;
               const stats = getBuildingClassStats(b.id);
@@ -972,7 +1298,7 @@ export function CampusMapSection({
                   onClick={() => selectBuilding(b.id)}
                   className={`w-full text-left rounded-2xl p-3.5 border transition-all ${
                     active
-                      ? "bg-[#0D1B2A] dark:bg-[#1B4B8A] text-white border-[#C49A45]/60 shadow-sm"
+                      ? "bg-[#0D1B2A] dark:bg-[#1B4B8A] text-white border-[#C49A45]/70 shadow-md"
                       : "bg-[var(--bg-page)] border-[var(--border-color)] hover:border-[var(--accent)]/50"
                   }`}
                 >
@@ -1018,7 +1344,7 @@ export function CampusMapSection({
                         {lang === "ru" ? `Занятий: ${stats.total}` : `Scheduled: ${stats.total}`}
                       </span>
                       {stats.changes > 0 && (
-                        <span className="px-2 py-0.5 rounded-md bg-amber-500/20 text-amber-300 dark:text-amber-200 font-semibold">
+                        <span className="px-2 py-0.5 rounded-md bg-amber-500/20 text-amber-200 font-semibold">
                           {lang === "ru" ? `Изменений: ${stats.changes}` : `Updates: ${stats.changes}`}
                         </span>
                       )}
@@ -1031,31 +1357,30 @@ export function CampusMapSection({
         </div>
       </div>
 
-      {/* Level 2: Interactive Floor Plan + Room Inspector */}
-      <div className="grid lg:grid-cols-12 gap-5 items-start">
-        {/* SVG Floorplan */}
-        <div className="stagger-item lg:col-span-7 rounded-3xl bg-[var(--bg-surface)] border border-[var(--border-color)] p-4 sm:p-5 shadow-sm space-y-4 min-w-0">
+      {/* SECTION 2: ANIMATED FLOOR BLUEPRINT + INSPECTOR */}
+      <div className="grid lg:grid-cols-12 gap-4 sm:gap-5 items-start">
+        <div className="stagger-item lg:col-span-7 rounded-3xl bg-[var(--bg-surface)] border border-[var(--border-color)] p-3.5 sm:p-5 shadow-sm space-y-3.5 min-w-0">
+          {/* Building Floor Header + Floor Selector */}
           <div className="flex flex-wrap items-center justify-between gap-2">
-            <div>
-              <h2 className="text-sm sm:text-base font-semibold flex items-center gap-2">
-                <Layers className="w-4 h-4 text-[var(--accent)]" />
-                <span>
-                  {lang === "ru" ? activeBuilding.name : activeBuilding.nameEn} —{" "}
+            <div className="min-w-0">
+              <h2 className="text-sm sm:text-base font-semibold flex items-center gap-2 truncate">
+                <Layers className="w-4 h-4 text-[var(--accent)] shrink-0" />
+                <span className="truncate">
+                  {lang === "ru" ? activeBuilding.name : activeBuilding.nameEn} ·{" "}
                   {floorLabel(activeBuilding, floor)}
                 </span>
               </h2>
             </div>
 
-            {/* Floor tabs */}
-            <div className="inline-flex rounded-xl bg-[var(--bg-page)] border border-[var(--border-color)] p-1">
+            <div className="inline-flex rounded-xl bg-[var(--bg-page)] border border-[var(--border-color)] p-1 shrink-0">
               {activeBuilding.floors.map((fl) => (
                 <button
                   key={fl}
                   type="button"
                   onClick={() => selectFloor(fl)}
-                  className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition-colors ${
+                  className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition-all ${
                     floor === fl
-                      ? "bg-[#0D1B2A] dark:bg-[#1B4B8A] text-white"
+                      ? "bg-[#0D1B2A] dark:bg-[#1B4B8A] text-white shadow-sm"
                       : "text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
                   }`}
                 >
@@ -1065,16 +1390,16 @@ export function CampusMapSection({
             </div>
           </div>
 
-          {/* Category Filter Chips + Route Toggle */}
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <div className="flex gap-1.5 overflow-x-auto pb-1 sm:pb-0">
+          {/* Filter Chips + Route Toggle */}
+          <div className="flex items-center justify-between gap-2">
+            <div className="flex gap-1.5 overflow-x-auto pb-1 sm:pb-0 min-w-0">
               {(
                 [
                   { id: "all", ru: "Все", en: "All" },
                   { id: "auditorium", ru: "Аудитории", en: "Rooms" },
                   { id: "hall", ru: "Залы", en: "Halls" },
-                  { id: "service", ru: "Деканат и сервисы", en: "Services" },
-                  { id: "my_classes", ru: "Мои пары", en: "My Classes" },
+                  { id: "service", ru: "Сервисы", en: "Services" },
+                  { id: "my_classes", ru: "Мои пары", en: "Classes" },
                 ] as const
               ).map((cat) => (
                 <button
@@ -1095,26 +1420,46 @@ export function CampusMapSection({
             <button
               type="button"
               onClick={() => setShowRoute((v) => !v)}
-              className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl text-[11px] font-semibold border transition-colors ${
+              className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl text-[11px] font-semibold border transition-colors shrink-0 ${
                 showRoute
-                  ? "bg-amber-500/15 border-amber-500/40 text-amber-800 dark:text-amber-200"
+                  ? "bg-amber-500/15 border-amber-500/45 text-amber-800 dark:text-amber-200"
                   : "bg-[var(--bg-page)] border-[var(--border-color)] text-[var(--text-secondary)]"
               }`}
             >
               <Navigation className="w-3 h-3 text-[#C49A45]" />
-              {lang === "ru" ? "Маршрут" : "Wayfinding"}
+              {lang === "ru" ? "Маршрут" : "Route"}
             </button>
           </div>
 
-          {/* SVG Floor Blueprint */}
-          <div className="rounded-2xl bg-[var(--bg-page)] border border-[var(--border-color)] p-2 sm:p-3">
+          {/* Animated SVG Architectural Floor Blueprint */}
+          <div
+            ref={floorStageRef}
+            className="rounded-2xl bg-[var(--bg-page)] border border-[var(--border-color)] p-2 sm:p-3 overflow-hidden"
+          >
             <svg
               viewBox="0 0 720 360"
               className="w-full h-auto block select-none"
               role="img"
-              aria-label={lang === "ru" ? "Поэтажный план корпуса" : "Floor plan"}
+              aria-label={lang === "ru" ? "Поэтажный архитектурный чертёж" : "Architectural floor blueprint"}
             >
-              {/* Outer Walls */}
+              <defs>
+                <pattern id="floorBlueprintGrid" width="20" height="20" patternUnits="userSpaceOnUse">
+                  <path
+                    d="M 20 0 L 0 0 0 20"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeOpacity="0.045"
+                    strokeWidth="0.8"
+                  />
+                </pattern>
+                <pattern id="stairHatch" width="6" height="6" patternUnits="userSpaceOnUse">
+                  <line x1="0" y1="3" x2="6" y2="3" stroke="currentColor" strokeOpacity="0.22" strokeWidth="1" />
+                </pattern>
+              </defs>
+
+              <rect x="18" y="14" width="684" height="332" rx="18" fill="url(#floorBlueprintGrid)" />
+
+              {/* Outer Thick Masonry Walls */}
               <rect
                 x="18"
                 y="14"
@@ -1123,9 +1468,21 @@ export function CampusMapSection({
                 rx="18"
                 fill="none"
                 stroke="currentColor"
-                strokeOpacity="0.18"
-                strokeWidth="2"
+                strokeOpacity="0.24"
+                strokeWidth="3"
               />
+              {/* Perimeter Window Mullions */}
+              <line x1="80" y1="14" x2="180" y2="14" stroke="#60A5FA" strokeOpacity="0.55" strokeWidth="4" />
+              <line x1="290" y1="14" x2="430" y2="14" stroke="#60A5FA" strokeOpacity="0.55" strokeWidth="4" />
+              <line x1="520" y1="14" x2="640" y2="14" stroke="#60A5FA" strokeOpacity="0.55" strokeWidth="4" />
+
+              {/* Structural Columns */}
+              {[38, 240, 442, 682].map((cx) => (
+                <g key={cx}>
+                  <rect x={cx - 4} y="152" width="8" height="8" rx="1.5" fill="currentColor" fillOpacity="0.28" />
+                  <rect x={cx - 4} y="200" width="8" height="8" rx="1.5" fill="currentColor" fillOpacity="0.28" />
+                </g>
+              ))}
 
               {/* Central Corridor */}
               <rect
@@ -1133,9 +1490,9 @@ export function CampusMapSection({
                 y="156"
                 width="652"
                 height="48"
-                rx="8"
+                rx="10"
                 fill="currentColor"
-                fillOpacity="0.04"
+                fillOpacity="0.045"
               />
               <text
                 x="360"
@@ -1147,42 +1504,64 @@ export function CampusMapSection({
                 fontFamily="monospace"
                 letterSpacing="3"
               >
-                {lang === "ru" ? "ЦЕНТРАЛЬНАЯ ГАЛЕРЕЯ · КОРИДОР" : "CENTRAL CORRIDOR"}
+                {lang === "ru" ? "ЦЕНТРАЛЬНАЯ ГАЛЕРЕЯ" : "CENTRAL CORRIDOR"}
               </text>
 
-              {/* Entrance / Lift Marker */}
+              {/* Left Stairwell Hatch */}
+              <g>
+                <rect x="292" y="228" width="44" height="58" rx="8" fill="url(#stairHatch)" stroke="currentColor" strokeOpacity="0.22" />
+                <text x="314" y="298" textAnchor="middle" fill="currentColor" fillOpacity="0.45" fontSize="8.5" fontFamily="monospace">
+                  {lang === "ru" ? "ЛЕСТН." : "STAIRS"}
+                </text>
+              </g>
+
+              {/* Right Elevator Shaft */}
+              <g>
+                <rect x="384" y="228" width="44" height="58" rx="8" fill="currentColor" fillOpacity="0.06" stroke="currentColor" strokeOpacity="0.22" />
+                <line x1="390" y1="234" x2="422" y2="280" stroke="currentColor" strokeOpacity="0.18" />
+                <line x1="422" y1="234" x2="390" y2="280" stroke="currentColor" strokeOpacity="0.18" />
+                <text x="406" y="298" textAnchor="middle" fill="currentColor" fillOpacity="0.45" fontSize="8.5" fontFamily="monospace">
+                  {lang === "ru" ? "ЛИФТ" : "LIFT"}
+                </text>
+              </g>
+
+              {/* Entrance / Lobby Marker */}
               <rect
-                x="300"
+                x="298"
                 y="306"
-                width="120"
-                height="32"
+                width="124"
+                height="30"
                 rx="8"
                 fill="#0D1B2A"
                 stroke="#C49A45"
-                strokeWidth="1.5"
+                strokeWidth="1.6"
               />
               <text
                 x="360"
-                y="326"
+                y="325"
                 textAnchor="middle"
                 fill="#FDE68A"
-                fontSize="10.5"
+                fontSize="10"
                 fontWeight="700"
                 fontFamily="monospace"
               >
-                {lang === "ru" ? "ЛИФТ / ВХОД" : "LIFT / ENTRY"}
+                {lang === "ru" ? "ВХОД / ХОЛЛ" : "LOBBY / ENTRY"}
               </text>
 
-              {/* Rooms */}
+              {/* Interactive Rooms */}
               {floorRooms.map((room) => {
                 const isSelected = selectedRoom?.id === room.id;
                 const liveClasses = schedule.filter((s) => roomMatchesSchedule(room, s));
                 const hasChange = liveClasses.some((s) => s.status !== "normal");
+                const doorX = room.destPoint.x;
+                const doorY = room.doorSide === "bottom" ? room.rect.y + room.rect.h : room.rect.y;
+                const arcSweep = room.doorSide === "bottom" ? 1 : 0;
+
                 return (
                   <g
                     key={room.id}
                     onClick={() => setSelectedRoomId(room.id)}
-                    className="cursor-pointer"
+                    className="map-room-node cursor-pointer"
                   >
                     <rect
                       x={room.rect.x}
@@ -1196,7 +1575,7 @@ export function CampusMapSection({
                           : hasChange
                             ? "rgba(245, 158, 11, 0.14)"
                             : room.category === "service"
-                              ? "rgba(196, 154, 69, 0.14)"
+                              ? "rgba(196, 154, 69, 0.12)"
                               : "var(--bg-surface)"
                       }
                       stroke={
@@ -1208,9 +1587,24 @@ export function CampusMapSection({
                       }
                       strokeWidth={isSelected ? "2.8" : "1.4"}
                     />
+
+                    {/* Subtle Architectural Interior Motif */}
+                    {renderRoomMotif(room, isSelected)}
+
+                    {/* Architectural Door Swing Arc */}
+                    <path
+                      d={`M ${doorX - 10} ${doorY} A 10 10 0 0 ${arcSweep} ${doorX} ${
+                        room.doorSide === "bottom" ? doorY - 10 : doorY + 10
+                      }`}
+                      fill="none"
+                      stroke={isSelected ? "#FDE68A" : "currentColor"}
+                      strokeOpacity={isSelected ? "0.8" : "0.28"}
+                      strokeWidth="1.4"
+                    />
+
                     <text
                       x={room.rect.x + 14}
-                      y={room.rect.y + 30}
+                      y={room.rect.y + 28}
                       fill={isSelected ? "#FDE68A" : "var(--accent)"}
                       fontSize="11.5"
                       fontWeight="700"
@@ -1220,7 +1614,7 @@ export function CampusMapSection({
                     </text>
                     <text
                       x={room.rect.x + 14}
-                      y={room.rect.y + 54}
+                      y={room.rect.y + 52}
                       fill={isSelected ? "#FFFFFF" : "var(--text-primary)"}
                       fontSize="16"
                       fontWeight="700"
@@ -1229,8 +1623,8 @@ export function CampusMapSection({
                     </text>
                     <text
                       x={room.rect.x + 14}
-                      y={room.rect.y + 76}
-                      fill={isSelected ? "rgba(255,255,255,0.8)" : "var(--text-secondary)"}
+                      y={room.rect.y + 73}
+                      fill={isSelected ? "rgba(255,255,255,0.82)" : "var(--text-secondary)"}
                       fontSize="11"
                     >
                       {lang === "ru" ? room.capacity : room.capacityEn}
@@ -1240,15 +1634,15 @@ export function CampusMapSection({
                       <g>
                         <rect
                           x={room.rect.x + 14}
-                          y={room.rect.y + 84}
-                          width={126}
+                          y={room.rect.y + 83}
+                          width={120}
                           height="18"
                           rx="6"
                           fill={hasChange ? "#D97706" : "#0D1B2A"}
                         />
                         <text
                           x={room.rect.x + 22}
-                          y={room.rect.y + 96}
+                          y={room.rect.y + 95}
                           fill="#FFFFFF"
                           fontSize="9.5"
                           fontWeight="700"
@@ -1256,7 +1650,7 @@ export function CampusMapSection({
                           {hasChange
                             ? lang === "ru"
                               ? `Перенос · ${liveClasses.length}`
-                              : `Changed · ${liveClasses.length}`
+                              : `Moved · ${liveClasses.length}`
                             : lang === "ru"
                               ? `По расп.: ${liveClasses.length}`
                               : `Classes: ${liveClasses.length}`}
@@ -1267,22 +1661,37 @@ export function CampusMapSection({
                 );
               })}
 
-              {/* Wayfinding Route Path */}
-              {showRoute && selectedRoom && selectedRoom.buildingId === buildingId && selectedRoom.floor === floor && (
-                <polyline
-                  points={selectedRoom.pathPoints}
-                  fill="none"
-                  stroke="#C49A45"
-                  strokeWidth="3.5"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeDasharray="7 6"
-                />
-              )}
+              {/* Animated SVG Wayfinding Route */}
+              {showRoute &&
+                selectedRoom &&
+                selectedRoom.buildingId === buildingId &&
+                selectedRoom.floor === floor && (
+                  <g>
+                    <polyline
+                      ref={routePathRef}
+                      points={selectedRoom.pathPoints}
+                      fill="none"
+                      stroke="#C49A45"
+                      strokeWidth="3.5"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeDasharray="8 6"
+                    />
+                    <circle
+                      ref={routeBeaconRef}
+                      cx={selectedRoom.destPoint.x}
+                      cy={selectedRoom.destPoint.y}
+                      r="6"
+                      fill="#C49A45"
+                      stroke="#FFFFFF"
+                      strokeWidth="2"
+                    />
+                  </g>
+                )}
             </svg>
           </div>
 
-          {/* Quick Touch Directory for Floor */}
+          {/* Quick Touch Directory Chips */}
           {floorRooms.length === 0 ? (
             <p className="text-xs text-[var(--text-secondary)] py-2">
               {lang === "ru"
@@ -1290,7 +1699,7 @@ export function CampusMapSection({
                 : "No rooms match this filter on this floor."}
             </p>
           ) : (
-            <div className="flex flex-wrap gap-1.5">
+            <div className="flex gap-1.5 overflow-x-auto pb-1 sm:flex-wrap sm:overflow-visible sm:pb-0">
               {floorRooms.map((r) => {
                 const active = selectedRoom?.id === r.id;
                 return (
@@ -1298,9 +1707,9 @@ export function CampusMapSection({
                     key={r.id}
                     type="button"
                     onClick={() => setSelectedRoomId(r.id)}
-                    className={`px-3 py-1.5 rounded-xl text-xs font-medium border transition-colors ${
+                    className={`whitespace-nowrap px-3 py-1.5 rounded-xl text-xs font-medium border transition-all ${
                       active
-                        ? "bg-[#0D1B2A] dark:bg-[#1B4B8A] text-white border-transparent"
+                        ? "bg-[#0D1B2A] dark:bg-[#1B4B8A] text-white border-transparent shadow-sm"
                         : "bg-[var(--bg-page)] border-[var(--border-color)] hover:border-[var(--accent)]"
                     }`}
                   >
@@ -1312,40 +1721,41 @@ export function CampusMapSection({
           )}
         </div>
 
-        {/* Selected Room Inspector */}
-        <div className="stagger-item lg:col-span-5 rounded-3xl bg-[var(--bg-surface)] border border-[var(--border-color)] p-5 shadow-sm space-y-4 min-w-0">
-          <div className="flex items-start justify-between gap-2">
-            <div>
-              <span className="inline-flex items-center gap-1.5 text-[11px] font-mono uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-[#1B4B8A]/10 text-[var(--accent)] font-semibold">
-                <DoorOpen className="w-3 h-3" />
-                {categoryLabel(selectedRoom.category)}
-              </span>
-              <h3 className="text-xl font-semibold mt-2">
-                {lang === "ru" ? selectedRoom.code : selectedRoom.codeEn}
-              </h3>
-              <p className="text-xs text-[var(--text-secondary)] mt-0.5">
-                {lang === "ru" ? selectedRoom.name : selectedRoom.nameEn}
-              </p>
-            </div>
+        {/* Selected Space Inspector */}
+        <div
+          ref={inspectorRef}
+          className="stagger-item lg:col-span-5 rounded-3xl bg-[var(--bg-surface)] border border-[var(--border-color)] p-4 sm:p-5 shadow-sm space-y-4 min-w-0"
+        >
+          <div>
+            <span className="inline-flex items-center gap-1.5 text-[11px] font-mono uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-[#1B4B8A]/10 text-[var(--accent)] font-semibold">
+              <DoorOpen className="w-3 h-3" />
+              {categoryLabel(selectedRoom.category)}
+            </span>
+            <h3 className="text-xl font-semibold mt-2">
+              {lang === "ru" ? selectedRoom.code : selectedRoom.codeEn}
+            </h3>
+            <p className="text-xs text-[var(--text-secondary)] mt-0.5">
+              {lang === "ru" ? selectedRoom.name : selectedRoom.nameEn}
+            </p>
           </div>
 
           <div className="grid grid-cols-2 gap-2.5 text-xs">
             <div className="rounded-2xl bg-[var(--bg-page)] border border-[var(--border-color)] p-3">
               <p className="text-[11px] text-[var(--text-secondary)] flex items-center gap-1">
-                <Users className="w-3.5 h-3.5 text-[var(--accent)]" />
+                <Users className="w-3.5 h-3.5 text-[var(--accent)] shrink-0" />
                 {lang === "ru" ? "Вместимость" : "Capacity"}
               </p>
-              <p className="font-semibold mt-1">
+              <p className="font-semibold mt-1 truncate">
                 {lang === "ru" ? selectedRoom.capacity : selectedRoom.capacityEn}
               </p>
             </div>
             <div className="rounded-2xl bg-[var(--bg-page)] border border-[var(--border-color)] p-3">
               <p className="text-[11px] text-[var(--text-secondary)] flex items-center gap-1">
-                <Accessibility className="w-3.5 h-3.5 text-emerald-600" />
-                {lang === "ru" ? "Доступность" : "Access"}
+                <Accessibility className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                {lang === "ru" ? "Доступ" : "Access"}
               </p>
-              <p className="font-semibold mt-1">
-                {lang === "ru" ? "Лифт и безбарьерно" : "Step-free & Lift"}
+              <p className="font-semibold mt-1 truncate">
+                {lang === "ru" ? "Лифт и пандус" : "Step-free & Lift"}
               </p>
             </div>
           </div>
@@ -1353,19 +1763,19 @@ export function CampusMapSection({
           {/* Walking Route Hint */}
           <div className="rounded-2xl bg-amber-500/10 border border-amber-500/25 p-3.5 text-xs space-y-1">
             <p className="font-semibold text-amber-900 dark:text-amber-200 flex items-center gap-1.5">
-              <MapPin className="w-3.5 h-3.5 text-[#C49A45]" />
-              {lang === "ru" ? "Как пройти" : "Walking Directions"}
+              <MapPin className="w-3.5 h-3.5 text-[#C49A45] shrink-0" />
+              {lang === "ru" ? "Как пройти от входа" : "Walking Directions"}
             </p>
             <p className="text-amber-950/85 dark:text-amber-100/90 leading-relaxed">
               {lang === "ru" ? selectedRoom.routeHint : selectedRoom.routeHintEn}
             </p>
           </div>
 
-          {/* Equipment Tags */}
+          {/* Equipment */}
           <div>
             <p className="text-[11px] font-semibold text-[var(--text-secondary)] uppercase tracking-wider mb-2 flex items-center gap-1.5">
               <Wifi className="w-3.5 h-3.5 text-[var(--accent)]" />
-              {lang === "ru" ? "Оснащение помещения" : "Room Equipment"}
+              {lang === "ru" ? "Оснащение" : "Equipment"}
             </p>
             <div className="flex flex-wrap gap-1.5">
               {(lang === "ru" ? selectedRoom.equipment : selectedRoom.equipmentEn).map((eq) => (
@@ -1384,19 +1794,19 @@ export function CampusMapSection({
             <p className="text-xs font-semibold flex items-center gap-1.5">
               <Calendar className="w-3.5 h-3.5 text-[var(--accent)]" />
               {lang === "ru"
-                ? "Занятия в этой аудитории (из расписания)"
-                : "Scheduled Classes in This Space"}
+                ? "Занятия в этой аудитории"
+                : "Classes in This Space"}
             </p>
 
             {selectedRoomClasses.length === 0 ? (
               <p className="text-xs text-[var(--text-secondary)]">
                 {selectedRoom.id === "main-214"
                   ? lang === "ru"
-                    ? "Кабинет 214 — точка выдачи готовых бумажных справок и консультаций деканата."
-                    : "Room 214 handles paper certificate pickups and in-person Dean advising."
+                    ? "Кабинет 214 — выдача бумажных справок и консультации деканата."
+                    : "Room 214 handles paper certificate pickups and Dean advising."
                   : lang === "ru"
-                    ? "В текущем расписании вашей группы здесь нет закреплённых пар."
-                    : "No scheduled sessions for your active timetable in this space."}
+                    ? "В вашем текущем расписании здесь нет закреплённых пар."
+                    : "No scheduled classes for your active timetable in this space."}
               </p>
             ) : (
               <div className="space-y-2">
