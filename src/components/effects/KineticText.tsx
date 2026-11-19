@@ -303,11 +303,11 @@ export function WelcomeKineticTitle({
           key={`${w}-${i}`}
           className="inline-block overflow-hidden align-baseline pb-1.5 mr-[0.24em]"
         >
-          <span className="wk-word inline-block will-change-transform">{w}</span>
+          <span className="wk-word inline-block">{w}</span>
         </span>
       ))}
       <span className="relative inline-block overflow-hidden align-baseline pb-1.5">
-        <span className="wk-word inline-block text-[var(--accent)] will-change-transform">
+        <span className="wk-word inline-block text-[var(--accent)]">
           {name}
         </span>
         <span

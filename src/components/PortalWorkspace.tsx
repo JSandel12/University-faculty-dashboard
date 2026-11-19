@@ -659,7 +659,7 @@ export function PortalWorkspace({
 
                 {/* Right 5 cols: Interactive 3D Student Pass + Recent Requests */}
                 <div className="lg:col-span-5 space-y-5 min-w-0">
-                  <div className="stagger-item rounded-3xl bg-[var(--bg-surface)] border border-[var(--border-color)] p-5 shadow-sm flex flex-col items-center">
+                  <div className="stagger-item isolate overflow-hidden rounded-3xl bg-[var(--bg-surface)] border border-[var(--border-color)] p-5 shadow-sm flex flex-col items-center">
                     <StudentPass3D
                       user={user}
                       lang={lang}

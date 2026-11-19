@@ -54,6 +54,17 @@ html.theme-transitioning,
 html.theme-transitioning * {
   transition: none !important;
 }
+html.theme-transitioning .pass-cube,
+html.theme-transitioning .wk-word,
+html.theme-transitioning .k-word {
+  will-change: auto !important;
+}
+html.theme-transitioning .pass-ambient-glow {
+  display: none !important;
+}
+html.theme-transitioning aside {
+  contain: layout paint;
+}
 html.theme-transitioning::view-transition-group(root) {
   animation: none;
 }
@@ -183,7 +194,6 @@ html.lang-transitioning.lang-rtl::view-transition-new(root) {
   height: 100%;
   transform-style: preserve-3d;
   transform: translateZ(calc(var(--pass-d) / -2));
-  will-change: transform;
   pointer-events: none;
 }
 

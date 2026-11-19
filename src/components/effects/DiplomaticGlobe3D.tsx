@@ -630,7 +630,7 @@ export function DiplomaticGlobe3D({
   const isRegistered = rsvpedIds.includes(selectedEvent.id);
 
   return (
-    <div className="stagger-item w-full min-w-0 rounded-3xl bg-gradient-to-br from-[#0B1726] via-[#10233D] to-[#132B4D] text-white border border-[#C49A45]/30 p-4 sm:p-6 shadow-xl overflow-hidden">
+    <div className="stagger-item isolate w-full min-w-0 rounded-3xl bg-gradient-to-br from-[#0B1726] via-[#10233D] to-[#132B4D] text-white border border-[#C49A45]/30 p-4 sm:p-6 shadow-xl overflow-hidden">
       <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
         <div className="min-w-0">
           <p className="text-[10px] font-mono uppercase tracking-[0.16em] text-[#DFB863] flex items-center gap-1.5">
