@@ -136,6 +136,10 @@ export function PortalWorkspace({
   };
 
   useEffect(() => {
+    window.scrollTo(0, 0);
+  }, [activeTab]);
+
+  useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
       if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") {
         e.preventDefault();
@@ -379,7 +383,7 @@ export function PortalWorkspace({
       </aside>
 
       {/* MAIN COLUMN */}
-      <div className="flex-1 lg:pl-72 flex flex-col min-h-screen pb-24 lg:pb-10">
+      <div className="flex-1 min-w-0 lg:pl-72 flex flex-col min-h-screen pb-24 lg:pb-10">
         {/* Sleek Academic Pulse & Concept Strip */}
         <div className="bg-[#0D1B2A] text-white/90 text-[11px] px-3 sm:px-6 lg:px-8 py-2 flex items-center justify-between gap-2 border-b border-[#C49A45]/30">
           <span className="flex items-center gap-2 min-w-0">
@@ -450,7 +454,7 @@ export function PortalWorkspace({
         </header>
 
         {/* MAIN CONTENT */}
-        <main className="flex-1 w-full max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-5 sm:py-7">
+        <main className="flex-1 min-w-0 w-full max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-5 sm:py-7">
           <SectionStage tabKey={activeTab}>
           <div className="space-y-6">
           {isStaff &&
@@ -1398,12 +1402,12 @@ export function PortalWorkspace({
           );
         })}
 
-        {/* 5th Slot: Opens GSAP SVG Curve Menu (Profile, Notifications, Theme, Lang, Sign Out) */}
+        {/* 5th Slot: Opens GSAP SVG Curve Menu (highlights only when drawer is open or active tab isn't in first 4 dock slots) */}
         <button
           type="button"
           onClick={() => setMobileMenuOpen(true)}
           className={`relative min-w-0 w-full flex flex-col items-center justify-center gap-0.5 px-1 py-1.5 rounded-2xl text-[10px] font-semibold transition-colors ${
-            mobileMenuOpen || activeTab === "profile" || activeTab === "notifications"
+            mobileMenuOpen || !navItems.slice(0, 4).some((item) => item.id === activeTab)
               ? "bg-[#0D1B2A]/10 dark:bg-white/15 text-[#0D1B2A] dark:text-white"
               : "text-slate-700 dark:text-slate-300"
           }`}

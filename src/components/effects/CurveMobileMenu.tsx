@@ -49,6 +49,8 @@ export function CurveMobileMenu({
   const overlayRef = useRef<HTMLDivElement | null>(null);
   const pathRef = useRef<SVGPathElement | null>(null);
   const contentRef = useRef<HTMLDivElement | null>(null);
+  const tlRef = useRef<gsap.core.Timeline | null>(null);
+  const hasMountedRef = useRef(false);
 
   const getPaths = useCallback(() => {
     const w = 1000;
@@ -70,12 +72,24 @@ export function CurveMobileMenu({
     const paths = getPaths();
     const links = content.querySelectorAll(".curve-menu-item");
 
+    if (!hasMountedRef.current) {
+      hasMountedRef.current = true;
+      if (!isOpen) {
+        gsap.set(overlay, { pointerEvents: "none", visibility: "hidden" });
+        gsap.set(path, { attr: { d: paths.HIDDEN } });
+        return;
+      }
+    }
+
+    tlRef.current?.kill();
+
     if (isOpen) {
       gsap.set(overlay, { pointerEvents: "auto", visibility: "visible" });
       gsap.set(path, { attr: { d: paths.HIDDEN } });
-      gsap.set(links, { y: 28, opacity: 0 });
+      gsap.set(links, { y: 24, opacity: 0 });
 
       const tl = gsap.timeline();
+      tlRef.current = tl;
       tl.to(path, {
         duration: 0.34,
         attr: { d: paths.BULGE },
@@ -91,9 +105,10 @@ export function CurveMobileMenu({
           {
             y: 0,
             opacity: 1,
-            duration: 0.38,
-            stagger: 0.045,
+            duration: 0.36,
+            stagger: 0.04,
             ease: "power3.out",
+            clearProps: "transform",
           },
           "-=0.25"
         );
@@ -103,8 +118,9 @@ export function CurveMobileMenu({
           gsap.set(overlay, { pointerEvents: "none", visibility: "hidden" });
         },
       });
+      tlRef.current = tl;
       tl.to(links, {
-        y: -16,
+        y: -14,
         opacity: 0,
         duration: 0.18,
         stagger: 0.02,
@@ -124,19 +140,23 @@ export function CurveMobileMenu({
           ease: "power3.out",
         });
     }
+
+    return () => {
+      tlRef.current?.kill();
+    };
   }, [isOpen, getPaths]);
 
   return (
     <div
       ref={overlayRef}
-      className="fixed inset-0 z-50 lg:hidden"
+      className="fixed inset-0 z-50 lg:hidden w-full overflow-hidden"
       style={{ visibility: "hidden", pointerEvents: "none" }}
       aria-hidden={!isOpen}
     >
       <svg
         viewBox="0 0 1000 1000"
         preserveAspectRatio="none"
-        className="absolute inset-0 w-full h-full"
+        className="absolute inset-0 w-full h-full pointer-events-none"
       >
         <path
           ref={pathRef}
@@ -147,26 +167,26 @@ export function CurveMobileMenu({
 
       <div
         ref={contentRef}
-        className="relative z-10 h-full flex flex-col justify-between p-5 text-[#0D1B2A] dark:text-white overflow-y-auto"
+        className="relative z-10 w-full h-full flex flex-col justify-between p-5 text-[#0D1B2A] dark:text-white overflow-y-auto overflow-x-hidden"
       >
-        <div className="flex items-center justify-between curve-menu-item">
-          <div className="flex items-center gap-2.5">
-            <BrandEmblem className="w-8 h-8 text-[#0D1B2A] dark:text-white" />
-            <div>
-              <p className="font-semibold text-base leading-none">{brandTitle}</p>
-              <p className="text-xs text-slate-600 dark:text-white/60 mt-1">{userName}</p>
+        <div className="flex items-center justify-between gap-3 w-full min-w-0 curve-menu-item">
+          <div className="flex items-center gap-2.5 min-w-0">
+            <BrandEmblem className="w-8 h-8 text-[#0D1B2A] dark:text-white shrink-0" />
+            <div className="min-w-0">
+              <p className="font-semibold text-base leading-none truncate">{brandTitle}</p>
+              <p className="text-xs text-slate-600 dark:text-white/60 mt-1 truncate">{userName}</p>
             </div>
           </div>
           <button
             onClick={onClose}
-            className="p-2.5 rounded-full bg-[#0D1B2A]/10 hover:bg-[#0D1B2A]/20 dark:bg-white/10 dark:hover:bg-white/20 text-[#0D1B2A] dark:text-white"
+            className="p-2.5 rounded-full shrink-0 bg-[#0D1B2A]/10 hover:bg-[#0D1B2A]/20 dark:bg-white/10 dark:hover:bg-white/20 text-[#0D1B2A] dark:text-white"
             aria-label="Close menu"
           >
             <X className="w-5 h-5" />
           </button>
         </div>
 
-        <nav className="my-6 flex flex-col gap-2">
+        <nav className="my-6 flex flex-col gap-2 w-full min-w-0">
           {items.map((item, idx) => {
             const active = activeTab === item.id;
             return (
@@ -176,21 +196,21 @@ export function CurveMobileMenu({
                   onSelect(item.id);
                   onClose();
                 }}
-                className={`curve-menu-item flex items-center justify-between text-left px-4 py-3.5 rounded-2xl transition-colors ${
+                className={`curve-menu-item w-full min-w-0 flex items-center justify-between gap-3 text-left px-4 py-3.5 rounded-2xl transition-colors ${
                   active
                     ? "bg-[#0D1B2A] dark:bg-[#1B4B8A] text-white"
                     : "text-[#0D1B2A]/85 dark:text-white/85 hover:bg-[#0D1B2A]/10 dark:hover:bg-white/10"
                 }`}
               >
-                <span className="flex items-center gap-3">
+                <span className="flex items-center gap-3 min-w-0 flex-1">
                   <span
-                    className={`font-mono text-xs ${
+                    className={`font-mono text-xs shrink-0 ${
                       active ? "text-[#DFB863]" : "text-[#9A7426] dark:text-[#DFB863]"
                     }`}
                   >
                     0{idx + 1}
                   </span>
-                  <span className="text-xl font-medium tracking-tight">
+                  <span className="text-lg sm:text-xl font-medium tracking-tight leading-snug truncate">
                     {item.label}
                   </span>
                 </span>

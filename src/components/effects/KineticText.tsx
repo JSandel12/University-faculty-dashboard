@@ -297,23 +297,23 @@ export function WelcomeKineticTitle({
   const greetingWords = greeting.split(" ");
 
   return (
-    <h1 ref={rootRef} className={`leading-[1.1] ${className}`}>
+    <h1 ref={rootRef} className={`leading-[1.15] ${className}`}>
       {greetingWords.map((w, i) => (
         <span
           key={`${w}-${i}`}
-          className="inline-block overflow-hidden align-bottom mr-[0.24em]"
+          className="inline-block overflow-hidden align-baseline pb-1.5 mr-[0.24em]"
         >
           <span className="wk-word inline-block will-change-transform">{w}</span>
         </span>
       ))}
-      <span className="relative inline-block overflow-hidden align-bottom pb-1">
+      <span className="relative inline-block overflow-hidden align-baseline pb-1.5">
         <span className="wk-word inline-block text-[var(--accent)] will-change-transform">
           {name}
         </span>
         <span
           ref={lineRef}
           aria-hidden="true"
-          className="absolute left-0 right-0 bottom-0 h-[2.5px] rounded-full bg-gradient-to-r from-[#C49A45] to-[#1B4B8A]"
+          className="absolute left-0 right-0 bottom-0.5 h-[2.5px] rounded-full bg-gradient-to-r from-[#C49A45] to-[#1B4B8A]"
         />
       </span>
     </h1>
