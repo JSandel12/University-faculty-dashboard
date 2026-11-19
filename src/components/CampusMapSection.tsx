@@ -731,9 +731,8 @@ export function CampusMapSection({
       if (roomNodes.length > 0) {
         gsap.fromTo(
           roomNodes,
-          { opacity: 0, scale: 0.94, transformOrigin: "center center" },
+          { scale: 0.94, transformOrigin: "center center" },
           {
-            opacity: 1,
             scale: 1,
             duration: 0.32,
             stagger: 0.04,
@@ -745,7 +744,7 @@ export function CampusMapSection({
     }, floorStageRef);
 
     return () => ctx.revert();
-  }, [buildingId, floor, categoryFilter]);
+  }, [buildingId, floor]);
 
   // Animate route trace + inspector panel whenever selected room or route visibility changes
   useEffect(() => {
@@ -806,22 +805,30 @@ export function CampusMapSection({
     [buildingId]
   );
 
-  const floorRooms = useMemo(() => {
-    return ROOMS.filter((r) => {
-      if (r.buildingId !== buildingId || r.floor !== floor) return false;
-      if (categoryFilter === "my_classes") {
-        return schedule.some((s) => roomMatchesSchedule(r, s));
-      }
-      if (categoryFilter !== "all") {
-        return r.category === categoryFilter;
-      }
-      return true;
-    });
-  }, [buildingId, floor, categoryFilter, schedule]);
+  const allFloorRooms = useMemo(
+    () => ROOMS.filter((r) => r.buildingId === buildingId && r.floor === floor),
+    [buildingId, floor]
+  );
+
+  const roomMatchesFilter = (r: FloorRoom) => {
+    if (categoryFilter === "my_classes") {
+      return schedule.some((s) => roomMatchesSchedule(r, s));
+    }
+    if (categoryFilter !== "all") {
+      return r.category === categoryFilter;
+    }
+    return true;
+  };
+
+  const floorRooms = useMemo(
+    () => allFloorRooms.filter(roomMatchesFilter),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [allFloorRooms, categoryFilter, schedule]
+  );
 
   const selectedRoom = useMemo(
-    () => ROOMS.find((r) => r.id === selectedRoomId) ?? floorRooms[0] ?? ROOMS[0],
-    [selectedRoomId, floorRooms]
+    () => ROOMS.find((r) => r.id === selectedRoomId) ?? floorRooms[0] ?? allFloorRooms[0] ?? ROOMS[0],
+    [selectedRoomId, floorRooms, allFloorRooms]
   );
 
   const selectedRoomClasses = useMemo(
@@ -1063,7 +1070,17 @@ export function CampusMapSection({
                   )}
                 </div>
                 <p className="text-[11px] font-semibold mt-1 truncate">
-                  {lang === "ru" ? b.name : b.nameEn}
+                  {lang === "ru"
+                    ? b.id === "main"
+                      ? "Главный"
+                      : b.id === "new_wing"
+                        ? "Новый"
+                        : "Право и ИТ"
+                    : b.id === "main"
+                      ? "Main"
+                      : b.id === "new_wing"
+                        ? "New Wing"
+                        : "Tech & Law"}
                 </p>
                 <p
                   className={`text-[9.5px] font-mono truncate ${
@@ -1390,9 +1407,9 @@ export function CampusMapSection({
             </div>
           </div>
 
-          {/* Filter Chips + Route Toggle */}
-          <div className="flex items-center justify-between gap-2">
-            <div className="flex gap-1.5 overflow-x-auto pb-1 sm:pb-0 min-w-0">
+          {/* Filter Chips + Route Toggle (Clean wrap, zero clipping) */}
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <div className="flex flex-wrap items-center gap-1.5">
               {(
                 [
                   { id: "all", ru: "Все", en: "All" },
@@ -1405,8 +1422,18 @@ export function CampusMapSection({
                 <button
                   key={cat.id}
                   type="button"
-                  onClick={() => setCategoryFilter(cat.id)}
-                  className={`whitespace-nowrap px-2.5 py-1 rounded-xl text-[11px] font-medium border transition-colors ${
+                  onClick={() => {
+                    setCategoryFilter(cat.id);
+                    const nextMatch = allFloorRooms.find((r) => {
+                      if (cat.id === "my_classes") {
+                        return schedule.some((s) => roomMatchesSchedule(r, s));
+                      }
+                      if (cat.id !== "all") return r.category === cat.id;
+                      return true;
+                    });
+                    if (nextMatch) setSelectedRoomId(nextMatch.id);
+                  }}
+                  className={`whitespace-nowrap px-2.5 py-1.5 rounded-xl text-[11px] font-medium border transition-colors ${
                     categoryFilter === cat.id
                       ? "bg-[#0D1B2A] dark:bg-[#1B4B8A] text-white border-transparent"
                       : "bg-[var(--bg-page)] border-[var(--border-color)] text-[var(--text-secondary)]"
@@ -1420,7 +1447,7 @@ export function CampusMapSection({
             <button
               type="button"
               onClick={() => setShowRoute((v) => !v)}
-              className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl text-[11px] font-semibold border transition-colors shrink-0 ${
+              className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[11px] font-semibold border transition-colors shrink-0 ${
                 showRoute
                   ? "bg-amber-500/15 border-amber-500/45 text-amber-800 dark:text-amber-200"
                   : "bg-[var(--bg-page)] border-[var(--border-color)] text-[var(--text-secondary)]"
@@ -1548,9 +1575,10 @@ export function CampusMapSection({
                 {lang === "ru" ? "ВХОД / ХОЛЛ" : "LOBBY / ENTRY"}
               </text>
 
-              {/* Interactive Rooms */}
-              {floorRooms.map((room) => {
+              {/* Interactive Rooms (all rooms shown cleanly; filtered-out ones dim softly) */}
+              {allFloorRooms.map((room) => {
                 const isSelected = selectedRoom?.id === room.id;
+                const isMatched = roomMatchesFilter(room);
                 const liveClasses = schedule.filter((s) => roomMatchesSchedule(room, s));
                 const hasChange = liveClasses.some((s) => s.status !== "normal");
                 const doorX = room.destPoint.x;
@@ -1561,7 +1589,8 @@ export function CampusMapSection({
                   <g
                     key={room.id}
                     onClick={() => setSelectedRoomId(room.id)}
-                    className="map-room-node cursor-pointer"
+                    style={{ opacity: isMatched || isSelected ? 1 : 0.28 }}
+                    className="map-room-node cursor-pointer transition-opacity duration-200"
                   >
                     <rect
                       x={room.rect.x}
@@ -1699,7 +1728,7 @@ export function CampusMapSection({
                 : "No rooms match this filter on this floor."}
             </p>
           ) : (
-            <div className="flex gap-1.5 overflow-x-auto pb-1 sm:flex-wrap sm:overflow-visible sm:pb-0">
+            <div className="flex flex-wrap gap-1.5">
               {floorRooms.map((r) => {
                 const active = selectedRoom?.id === r.id;
                 return (
