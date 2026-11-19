@@ -381,10 +381,15 @@ export function PortalWorkspace({
       {/* MAIN COLUMN */}
       <div className="flex-1 lg:pl-72 flex flex-col min-h-screen pb-24 lg:pb-10">
         {/* Sleek Academic Pulse & Concept Strip */}
-        <div className="bg-[#0D1B2A] text-white/90 text-[11px] px-4 sm:px-6 lg:px-8 py-2 flex items-center justify-between gap-2 border-b border-[#C49A45]/30">
-          <span className="flex items-center gap-2 truncate">
+        <div className="bg-[#0D1B2A] text-white/90 text-[11px] px-3 sm:px-6 lg:px-8 py-2 flex items-center justify-between gap-2 border-b border-[#C49A45]/30">
+          <span className="flex items-center gap-2 min-w-0">
             <span className="w-2 h-2 rounded-full bg-emerald-400 shrink-0" />
-            <span className="truncate font-medium">
+            <span className="sm:hidden truncate font-medium">
+              {lang === "ru"
+                ? "Осень 2026 · 12-я нед. · Сессия через 38 дн."
+                : "Fall 2026 · Wk 12 · Finals in 38d"}
+            </span>
+            <span className="hidden sm:inline truncate font-medium">
               {lang === "ru"
                 ? "Осенний семестр 2026 · 12-я учебная неделя · До сессии 38 дн."
                 : "Fall Semester 2026 · Week 12 · 38 days to finals"}
@@ -1316,7 +1321,7 @@ export function PortalWorkspace({
       </div>
 
       {/* MOBILE FROSTED GLASS BOTTOM DOCK (360px+) */}
-      <nav className="lg:hidden fixed bottom-0 inset-x-0 z-30 bg-white/75 dark:bg-[#0B1726]/75 backdrop-blur-2xl backdrop-saturate-150 border-t border-slate-200/80 dark:border-white/15 shadow-[0_-8px_28px_rgba(13,27,42,0.14)] dark:shadow-[0_-8px_28px_rgba(0,0,0,0.5)] px-1.5 py-1.5 flex items-center justify-around">
+      <nav className="lg:hidden fixed bottom-0 inset-x-0 z-30 bg-white/80 dark:bg-[#0B1726]/80 backdrop-blur-2xl backdrop-saturate-150 border-t border-slate-200/80 dark:border-white/15 shadow-[0_-8px_28px_rgba(13,27,42,0.14)] dark:shadow-[0_-8px_28px_rgba(0,0,0,0.5)] px-1 py-1.5 grid grid-cols-5 gap-0.5 w-full">
         {navItems.slice(0, 4).map((item) => {
           const active = activeTab === item.id;
           const Icon =
@@ -1331,25 +1336,61 @@ export function PortalWorkspace({
                     : item.id === "staff_broadcast"
                       ? Send
                       : Bell;
+          const mobileLabel =
+            lang === "ru"
+              ? item.id === "overview"
+                ? "Обзор"
+                : item.id === "schedule" || item.id === "staff_schedule"
+                  ? "Пары"
+                  : item.id === "academics"
+                    ? "Оценки"
+                    : item.id === "requests"
+                      ? "Заявки"
+                      : item.id === "staff_queue"
+                        ? "Очередь"
+                        : item.id === "staff_broadcast"
+                          ? "Посты"
+                          : item.id === "notifications"
+                            ? "События"
+                            : item.label
+              : item.id === "overview"
+                ? "Home"
+                : item.id === "schedule"
+                  ? "Schedule"
+                  : item.id === "staff_schedule"
+                    ? "Classes"
+                    : item.id === "academics"
+                      ? "Grades"
+                      : item.id === "requests"
+                        ? "Docs"
+                        : item.id === "staff_queue"
+                          ? "Queue"
+                          : item.id === "staff_broadcast"
+                            ? "Posts"
+                            : item.id === "notifications"
+                              ? "Alerts"
+                              : item.label;
           return (
             <button
               key={item.id}
               type="button"
               onClick={() => setActiveTab(item.id)}
-              className={`relative flex flex-col items-center gap-0.5 px-2.5 py-1.5 rounded-2xl text-[10px] font-semibold transition-colors ${
+              className={`relative min-w-0 w-full flex flex-col items-center justify-center gap-0.5 px-1 py-1.5 rounded-2xl text-[10px] font-semibold transition-colors ${
                 active
                   ? "bg-[#0D1B2A]/10 dark:bg-white/15 text-[#0D1B2A] dark:text-white"
                   : "text-slate-700 dark:text-slate-300"
               }`}
             >
               <Icon
-                className={`w-4 h-4 ${
+                className={`w-4 h-4 shrink-0 ${
                   active ? "text-[#1B4B8A] dark:text-[#60A5FA]" : ""
                 }`}
               />
-              <span className="max-w-[60px] truncate">{item.label}</span>
+              <span className="w-full truncate text-center leading-tight">
+                {mobileLabel}
+              </span>
               {item.badge ? (
-                <span className="absolute top-0.5 right-1.5 w-3.5 h-3.5 rounded-full bg-[#C49A45] text-[#0D1B2A] text-[9px] font-bold flex items-center justify-center">
+                <span className="absolute top-0.5 right-2.5 w-3.5 h-3.5 rounded-full bg-[#C49A45] text-[#0D1B2A] text-[9px] font-bold flex items-center justify-center">
                   {item.badge}
                 </span>
               ) : null}
@@ -1361,14 +1402,16 @@ export function PortalWorkspace({
         <button
           type="button"
           onClick={() => setMobileMenuOpen(true)}
-          className={`relative flex flex-col items-center gap-0.5 px-2.5 py-1.5 rounded-2xl text-[10px] font-semibold transition-colors ${
+          className={`relative min-w-0 w-full flex flex-col items-center justify-center gap-0.5 px-1 py-1.5 rounded-2xl text-[10px] font-semibold transition-colors ${
             mobileMenuOpen || activeTab === "profile" || activeTab === "notifications"
               ? "bg-[#0D1B2A]/10 dark:bg-white/15 text-[#0D1B2A] dark:text-white"
               : "text-slate-700 dark:text-slate-300"
           }`}
         >
-          <Menu className="w-4 h-4" />
-          <span>{lang === "ru" ? "Меню" : "More"}</span>
+          <Menu className="w-4 h-4 shrink-0" />
+          <span className="w-full truncate text-center leading-tight">
+            {lang === "ru" ? "Меню" : "More"}
+          </span>
         </button>
       </nav>
 

@@ -261,10 +261,17 @@ export function StudentPass3D({ user, lang, hintText }: StudentPass3DProps) {
         </div>
       </div>
 
-      <p className="mt-3 text-[11px] text-[var(--text-secondary)] flex items-center gap-1.5 text-center">
-        <RotateCw className="w-3 h-3 text-[var(--accent)]" />
-        <span>{hintText}</span>
-      </p>
+      <div className="mt-3 flex justify-center w-full">
+        <p className="inline-flex items-center justify-center gap-1.5 px-3 py-1 rounded-full bg-[var(--bg-page)] border border-[var(--border-color)] text-[11px] text-[var(--text-secondary)] max-w-full">
+          <RotateCw className="w-3 h-3 text-[var(--accent)] shrink-0" />
+          <span className="sm:hidden truncate">
+            {lang === "ru"
+              ? "Нажмите на пропуск · 180°"
+              : "Tap pass to flip · 180°"}
+          </span>
+          <span className="hidden sm:inline">{hintText}</span>
+        </p>
+      </div>
     </div>
   );
 }

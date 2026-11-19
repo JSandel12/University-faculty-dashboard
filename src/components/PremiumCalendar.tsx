@@ -261,11 +261,11 @@ export function PremiumCalendar({
           />
         </div>
 
-        <div className="flex flex-wrap items-center gap-2">
-          <div className="inline-flex rounded-2xl bg-[var(--bg-surface)] border border-[var(--border-color)] p-1 shadow-sm">
+        <div className="w-full sm:w-auto flex items-center justify-between sm:justify-start gap-2">
+          <div className="inline-flex rounded-2xl bg-[var(--bg-surface)] border border-[var(--border-color)] p-1 shadow-sm shrink-0">
             {(
               [
-                { id: "week", ru: "Неделя", en: "Week Grid" },
+                { id: "week", ru: "Неделя", en: "Week" },
                 { id: "day", ru: "День", en: "Day" },
                 { id: "month", ru: "Месяц", en: "Month" },
               ] as const
@@ -274,7 +274,7 @@ export function PremiumCalendar({
                 key={m.id}
                 type="button"
                 onClick={() => setViewMode(m.id)}
-                className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-colors ${
+                className={`px-2.5 sm:px-3 py-1.5 rounded-xl text-[11px] sm:text-xs font-semibold transition-colors whitespace-nowrap ${
                   viewMode === m.id
                     ? "bg-[#0D1B2A] dark:bg-[#1B4B8A] text-white"
                     : "text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
@@ -288,14 +288,18 @@ export function PremiumCalendar({
           <button
             type="button"
             onClick={() => setChangesOnly((v) => !v)}
-            className={`inline-flex items-center gap-1.5 px-3 py-2 rounded-2xl text-xs font-semibold border transition-colors ${
+            className={`inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-2xl text-[11px] sm:text-xs font-semibold border transition-colors whitespace-nowrap shrink-0 shadow-sm ${
               changesOnly
                 ? "bg-amber-500/15 border-amber-500/45 text-amber-800 dark:text-amber-200"
-                : "bg-[var(--bg-surface)] border-[var(--border-color)]"
+                : "bg-[var(--bg-surface)] border-[var(--border-color)] text-[var(--text-primary)] hover:border-[var(--accent)]/40"
             }`}
+            title={t.changesOnly}
           >
-            <Sparkles className="w-3.5 h-3.5 text-[#C49A45]" />
-            <span>
+            <Sparkles className="w-3.5 h-3.5 text-[#C49A45] shrink-0" />
+            <span className="sm:hidden">
+              {lang === "ru" ? "Изм." : "Changes"} ({changesCount})
+            </span>
+            <span className="hidden sm:inline">
               {t.changesOnly} ({changesCount})
             </span>
           </button>
