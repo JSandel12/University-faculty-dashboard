@@ -32,6 +32,7 @@
   box-sizing: border-box;
 }
 
+/* Keep horizontal clipping on body only — setting overflow on html splits Chromium View Transition snapshots. */
 html {
   margin: 0;
   padding: 0;
@@ -49,32 +50,43 @@ body {
   overflow-x: clip;
 }
 
+/* Flatten preserve-3d / will-change layers during root View Transitions to avoid Chromium sidebar/bar compositor glitches */
+html.theme-transitioning .pass-cube,
+html.theme-transitioning .wk-word,
+html.theme-transitioning .k-word,
+html.lang-transitioning .pass-cube,
+html.lang-transitioning .wk-word,
+html.lang-transitioning .k-word {
+  will-change: auto !important;
+}
+html.theme-transitioning .pass-cube,
+html.lang-transitioning .pass-cube {
+  transform-style: flat !important;
+}
+html.theme-transitioning .pass-bezel-slice,
+html.theme-transitioning .pass-ambient-glow,
+html.lang-transitioning .pass-bezel-slice,
+html.lang-transitioning .pass-ambient-glow {
+  display: none !important;
+}
+html.theme-transitioning .pass-face-front,
+html.lang-transitioning .pass-face-front {
+  transform: none !important;
+  z-index: 2;
+}
+html.theme-transitioning .pass-face-back,
+html.lang-transitioning .pass-face-back {
+  z-index: 1;
+}
+html.theme-transitioning aside,
+html.lang-transitioning aside {
+  contain: layout paint;
+}
+
 /* Radial Light/Dark Mode View Transition */
 html.theme-transitioning,
 html.theme-transitioning * {
   transition: none !important;
-}
-html.theme-transitioning .pass-cube,
-html.theme-transitioning .wk-word,
-html.theme-transitioning .k-word {
-  will-change: auto !important;
-}
-html.theme-transitioning .pass-cube {
-  transform-style: flat !important;
-}
-html.theme-transitioning .pass-bezel-slice,
-html.theme-transitioning .pass-ambient-glow {
-  display: none !important;
-}
-html.theme-transitioning .pass-face-front {
-  transform: none !important;
-  z-index: 2;
-}
-html.theme-transitioning .pass-face-back {
-  z-index: 1;
-}
-html.theme-transitioning aside {
-  contain: layout paint;
 }
 html.theme-transitioning::view-transition-group(root) {
   animation: none;
