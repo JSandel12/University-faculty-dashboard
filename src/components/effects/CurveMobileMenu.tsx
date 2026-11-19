@@ -86,7 +86,7 @@ export function CurveMobileMenu({
     if (isOpen) {
       gsap.set(overlay, { pointerEvents: "auto", visibility: "visible" });
       gsap.set(path, { attr: { d: paths.HIDDEN } });
-      gsap.set(links, { y: 24, opacity: 0 });
+      gsap.set(links, { y: 12, opacity: 0, force3D: false });
 
       const tl = gsap.timeline();
       tlRef.current = tl;
@@ -105,10 +105,10 @@ export function CurveMobileMenu({
           {
             y: 0,
             opacity: 1,
-            duration: 0.36,
+            duration: 0.34,
             stagger: 0.04,
             ease: "power3.out",
-            clearProps: "transform",
+            force3D: false,
           },
           "-=0.25"
         );
@@ -120,10 +120,11 @@ export function CurveMobileMenu({
       });
       tlRef.current = tl;
       tl.to(links, {
-        y: -14,
+        y: -10,
         opacity: 0,
-        duration: 0.18,
+        duration: 0.16,
         stagger: 0.02,
+        force3D: false,
       })
         .to(
           path,
@@ -167,9 +168,9 @@ export function CurveMobileMenu({
 
       <div
         ref={contentRef}
-        className="relative z-10 w-full h-full flex flex-col justify-between p-5 text-[#0D1B2A] dark:text-white overflow-y-auto overflow-x-hidden"
+        className="relative z-10 w-full h-full flex flex-col justify-between p-5 pb-7 text-[#0D1B2A] dark:text-white overflow-hidden"
       >
-        <div className="flex items-center justify-between gap-3 w-full min-w-0 curve-menu-item">
+        <div className="flex items-center justify-between gap-3 w-full min-w-0 shrink-0 curve-menu-item">
           <div className="flex items-center gap-2.5 min-w-0">
             <BrandEmblem className="w-8 h-8 text-[#0D1B2A] dark:text-white shrink-0" />
             <div className="min-w-0">
@@ -186,7 +187,7 @@ export function CurveMobileMenu({
           </button>
         </div>
 
-        <nav className="my-6 flex flex-col gap-2 w-full min-w-0">
+        <nav className="my-4 flex-1 min-h-0 flex flex-col justify-center gap-2 w-full min-w-0 overflow-y-auto overflow-x-hidden py-3">
           {items.map((item, idx) => {
             const active = activeTab === item.id;
             return (
@@ -215,7 +216,7 @@ export function CurveMobileMenu({
                   </span>
                 </span>
                 {item.badge ? (
-                  <span className="px-2.5 py-0.5 rounded-full bg-[#C49A45] text-[#0D1B2A] text-xs font-bold">
+                  <span className="px-2.5 py-0.5 rounded-full bg-[#C49A45] text-[#0D1B2A] text-xs font-bold shrink-0">
                     {item.badge}
                   </span>
                 ) : null}
@@ -224,7 +225,7 @@ export function CurveMobileMenu({
           })}
         </nav>
 
-        <div className="curve-menu-item flex flex-wrap items-center justify-between gap-3 pt-4 border-t border-[#0D1B2A]/15 dark:border-white/15">
+        <div className="curve-menu-item shrink-0 flex flex-wrap items-center justify-between gap-3 pt-4 border-t border-[#0D1B2A]/15 dark:border-white/15">
           <div className="flex items-center gap-2">
             <button
               onClick={onToggleLang}
