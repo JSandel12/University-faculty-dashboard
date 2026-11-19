@@ -11,7 +11,6 @@ import {
   Clock,
   FileCheck2,
   FileText,
-  Globe,
   GraduationCap,
   LayoutDashboard,
   Lock,
@@ -42,6 +41,7 @@ import { BrandEmblem } from "./BrandEmblem";
 import { CampusMapSection } from "./CampusMapSection";
 import { CertificateModal } from "./CertificateModal";
 import { CommandAssistantModal } from "./CommandAssistantModal";
+import { LanguageSwitch } from "./LanguageSwitch";
 import { PremiumCalendar } from "./PremiumCalendar";
 import { StaffConsole } from "./StaffConsole";
 import { CurveMobileMenu, type NavEntry } from "./effects/CurveMobileMenu";
@@ -359,14 +359,7 @@ export function PortalWorkspace({
           </div>
 
           <div className="flex items-center justify-between gap-2">
-            <button
-              type="button"
-              onClick={onToggleLang}
-              className="flex-1 inline-flex items-center justify-center gap-1.5 py-2 rounded-xl bg-[var(--bg-subtle)] text-xs font-medium"
-            >
-              <Globe className="w-3.5 h-3.5" />
-              {lang === "ru" ? "EN" : "RU"}
-            </button>
+            <LanguageSwitch lang={lang} onToggle={onToggleLang} variant="surface" />
             <button
               type="button"
               onClick={onToggleDark}

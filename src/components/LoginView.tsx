@@ -3,7 +3,6 @@
 import React, { useRef, useState } from "react";
 import {
   ArrowRight,
-  Globe,
   Lock,
   Moon,
   ShieldCheck,
@@ -13,6 +12,7 @@ import {
 } from "lucide-react";
 import { DICT, type Lang } from "@/lib/i18n";
 import { BrandEmblem } from "./BrandEmblem";
+import { LanguageSwitch } from "./LanguageSwitch";
 import { FluidGradientCanvas } from "./effects/FluidGradientCanvas";
 import { BlockRevealHeading } from "./effects/KineticText";
 
@@ -134,14 +134,7 @@ export function LoginView({
           </div>
 
           <div className="flex items-center gap-1.5 shrink-0">
-            <button
-              type="button"
-              onClick={onToggleLang}
-              className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-full bg-white/10 hover:bg-white/20 backdrop-blur-md border border-white/15 text-xs font-medium transition-colors"
-            >
-              <Globe className="w-3.5 h-3.5" />
-              {lang === "ru" ? "EN" : "RU"}
-            </button>
+            <LanguageSwitch lang={lang} onToggle={onToggleLang} variant="glass" />
             <button
               type="button"
               onClick={onToggleDark}

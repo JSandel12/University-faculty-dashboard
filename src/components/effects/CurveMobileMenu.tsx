@@ -2,9 +2,10 @@
 
 import React, { useCallback, useEffect, useRef } from "react";
 import gsap from "gsap";
-import { X, Globe, Moon, Sun, LogOut } from "lucide-react";
+import { X, Moon, Sun, LogOut } from "lucide-react";
 import type { Lang } from "@/lib/i18n";
 import { BrandEmblem } from "../BrandEmblem";
+import { LanguageSwitch } from "../LanguageSwitch";
 
 export interface NavEntry {
   id: string;
@@ -227,13 +228,7 @@ export function CurveMobileMenu({
 
         <div className="curve-menu-item shrink-0 flex flex-wrap items-center justify-between gap-3 pt-4 border-t border-[#0D1B2A]/15 dark:border-white/15">
           <div className="flex items-center gap-2">
-            <button
-              onClick={onToggleLang}
-              className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-[#0D1B2A]/10 dark:bg-white/10 text-xs font-medium"
-            >
-              <Globe className="w-4 h-4" />
-              {lang === "ru" ? "EN" : "RU"}
-            </button>
+            <LanguageSwitch lang={lang} onToggle={onToggleLang} variant="surface" />
             <button
               onClick={onToggleDark}
               className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-[#0D1B2A]/10 dark:bg-white/10 text-xs font-medium"
