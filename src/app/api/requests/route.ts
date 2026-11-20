@@ -5,10 +5,15 @@ import {
   createRequest,
   findUserById,
   getAllRequests,
+  getBookedAppointmentSlots,
   getRequestsForStudent,
 } from "@/lib/db";
 import { getSessionFromCookies } from "@/lib/security";
-import type { CertificateRequest, RequestTypeCode } from "@/lib/types";
+import {
+  DEAN_APPOINTMENT_SLOTS,
+  type CertificateRequest,
+  type RequestTypeCode,
+} from "@/lib/types";
 
 const REQUEST_CATALOG: Record<
   RequestTypeCode,
@@ -75,6 +80,7 @@ export async function POST(request: Request) {
     typeCode?: RequestTypeCode;
     purpose?: string;
     deliveryFormat?: "digital_pdf" | "paper_pickup";
+    appointmentSlot?: string;
   };
 
   const typeCode = body.typeCode;
@@ -96,6 +102,40 @@ export async function POST(request: Request) {
   const deliveryFormat =
     body.deliveryFormat === "paper_pickup" ? "paper_pickup" : "digital_pdf";
 
+  let appointmentSlot: string | undefined;
+  let appointmentWindow: string | undefined;
+  let queueTicket: string | undefined;
+
+  if (deliveryFormat === "paper_pickup") {
+    const booked = await getBookedAppointmentSlots();
+    const requestedSlot = body.appointmentSlot?.trim();
+    const validSlots: readonly string[] = DEAN_APPOINTMENT_SLOTS;
+
+    if (requestedSlot) {
+      if (!validSlots.includes(requestedSlot)) {
+        return NextResponse.json(
+          { error: "Выберите доступный 10-минутный слот записи" },
+          { status: 400 }
+        );
+      }
+      if (booked.includes(requestedSlot)) {
+        return NextResponse.json(
+          { error: `Слот ${requestedSlot} уже занят. Выберите другое время.` },
+          { status: 409 }
+        );
+      }
+      appointmentSlot = requestedSlot;
+    } else {
+      appointmentSlot = validSlots.find((s) => !booked.includes(s)) ?? validSlots[0];
+    }
+
+    const slotIdx = Math.max(0, validSlots.indexOf(appointmentSlot));
+    const ticketNum = 15 + booked.length + slotIdx;
+    queueTicket = `А-${ticketNum}`;
+    appointmentWindow =
+      slotIdx % 2 === 0 ? "Окно № 1 · каб. 214" : "Окно № 2 · каб. 214";
+  }
+
   const now = new Date().toISOString();
   const shortHex = crypto.randomBytes(2).toString("hex").toUpperCase();
   const groupClean = user.profile.groupCode.replace(/[^A-ZА-Я0-9]/gi, "");
@@ -112,6 +152,9 @@ export async function POST(request: Request) {
     titleEn: catalog.titleEn,
     purpose,
     deliveryFormat,
+    appointmentSlot,
+    appointmentWindow,
+    queueTicket,
     status: "submitted",
     verificationCode,
     createdAt: now,
@@ -119,6 +162,15 @@ export async function POST(request: Request) {
   };
 
   const created = await createRequest(newReq);
+
+  const slotInfoRu =
+    appointmentSlot && queueTicket
+      ? ` Талон ${queueTicket} в каб. 214 забронирован на ${appointmentSlot} (${appointmentWindow}).`
+      : "";
+  const slotInfoEn =
+    appointmentSlot && queueTicket
+      ? ` Ticket ${queueTicket} for Rm. 214 booked at ${appointmentSlot}.`
+      : "";
 
   await createNotification({
     id: `not-${crypto.randomUUID().slice(0, 8)}`,
@@ -128,8 +180,8 @@ export async function POST(request: Request) {
     urgent: false,
     title: `Заявка ${verificationCode} принята в обработку`,
     titleEn: `Request ${verificationCode} Submitted`,
-    body: `Документ «${catalog.title}» зарегистрирован. Статус обновляется в реальном времени.`,
-    bodyEn: `Your request "${catalog.titleEn}" has been registered and routed to the dean's office queue.`,
+    body: `Документ «${catalog.title}» зарегистрирован.${slotInfoRu}`,
+    bodyEn: `Your request "${catalog.titleEn}" has been registered.${slotInfoEn}`,
     createdAt: now,
     readBy: [],
   });

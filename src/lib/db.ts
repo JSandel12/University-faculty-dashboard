@@ -136,6 +136,9 @@ async function ensurePgSchema() {
       title_en TEXT NOT NULL,
       purpose TEXT NOT NULL,
       delivery_format TEXT NOT NULL,
+      appointment_slot TEXT,
+      appointment_window TEXT,
+      queue_ticket TEXT,
       status TEXT NOT NULL,
       staff_comment TEXT,
       verification_code TEXT NOT NULL,
@@ -143,6 +146,9 @@ async function ensurePgSchema() {
       updated_at TEXT NOT NULL
     )
   `;
+  await sql`ALTER TABLE decanat_requests ADD COLUMN IF NOT EXISTS appointment_slot TEXT`;
+  await sql`ALTER TABLE decanat_requests ADD COLUMN IF NOT EXISTS appointment_window TEXT`;
+  await sql`ALTER TABLE decanat_requests ADD COLUMN IF NOT EXISTS queue_ticket TEXT`;
 
   await sql`
     CREATE TABLE IF NOT EXISTS decanat_notifications (
@@ -187,8 +193,8 @@ async function ensurePgSchema() {
     }
     for (const r of seed.requests) {
       await sql`
-        INSERT INTO decanat_requests (id, student_id, student_name, group_code, type_code, title, title_en, purpose, delivery_format, status, staff_comment, verification_code, created_at, updated_at)
-        VALUES (${r.id}, ${r.studentId}, ${r.studentName}, ${r.groupCode}, ${r.typeCode}, ${r.title}, ${r.titleEn}, ${r.purpose}, ${r.deliveryFormat}, ${r.status}, ${r.staffComment ?? null}, ${r.verificationCode}, ${r.createdAt}, ${r.updatedAt})
+        INSERT INTO decanat_requests (id, student_id, student_name, group_code, type_code, title, title_en, purpose, delivery_format, appointment_slot, appointment_window, queue_ticket, status, staff_comment, verification_code, created_at, updated_at)
+        VALUES (${r.id}, ${r.studentId}, ${r.studentName}, ${r.groupCode}, ${r.typeCode}, ${r.title}, ${r.titleEn}, ${r.purpose}, ${r.deliveryFormat}, ${r.appointmentSlot ?? null}, ${r.appointmentWindow ?? null}, ${r.queueTicket ?? null}, ${r.status}, ${r.staffComment ?? null}, ${r.verificationCode}, ${r.createdAt}, ${r.updatedAt})
         ON CONFLICT (id) DO NOTHING
       `;
     }
@@ -279,6 +285,9 @@ function mapPgRequest(row: Record<string, unknown>): CertificateRequest {
     titleEn: String(row.title_en),
     purpose: String(row.purpose),
     deliveryFormat: row.delivery_format as CertificateRequest["deliveryFormat"],
+    appointmentSlot: row.appointment_slot ? String(row.appointment_slot) : undefined,
+    appointmentWindow: row.appointment_window ? String(row.appointment_window) : undefined,
+    queueTicket: row.queue_ticket ? String(row.queue_ticket) : undefined,
     status: row.status as RequestStatus,
     staffComment: row.staff_comment ? String(row.staff_comment) : undefined,
     verificationCode: String(row.verification_code),
@@ -485,6 +494,13 @@ export async function getRequestById(
   return db.requests.find((r) => r.id === id) ?? null;
 }
 
+export async function getBookedAppointmentSlots(): Promise<string[]> {
+  const all = await getAllRequests();
+  return all
+    .filter((r) => r.appointmentSlot && r.status !== "rejected")
+    .map((r) => r.appointmentSlot as string);
+}
+
 export async function createRequest(
   req: CertificateRequest
 ): Promise<CertificateRequest> {
@@ -493,11 +509,13 @@ export async function createRequest(
     const rows = await sql`
       INSERT INTO decanat_requests (
         id, student_id, student_name, group_code, type_code, title, title_en,
-        purpose, delivery_format, status, staff_comment, verification_code, created_at, updated_at
+        purpose, delivery_format, appointment_slot, appointment_window, queue_ticket,
+        status, staff_comment, verification_code, created_at, updated_at
       ) VALUES (
         ${req.id}, ${req.studentId}, ${req.studentName}, ${req.groupCode}, ${req.typeCode},
-        ${req.title}, ${req.titleEn}, ${req.purpose}, ${req.deliveryFormat}, ${req.status},
-        ${req.staffComment ?? null}, ${req.verificationCode}, ${req.createdAt}, ${req.updatedAt}
+        ${req.title}, ${req.titleEn}, ${req.purpose}, ${req.deliveryFormat},
+        ${req.appointmentSlot ?? null}, ${req.appointmentWindow ?? null}, ${req.queueTicket ?? null},
+        ${req.status}, ${req.staffComment ?? null}, ${req.verificationCode}, ${req.createdAt}, ${req.updatedAt}
       )
       RETURNING *
     `;

@@ -5,6 +5,7 @@ import {
   findUserById,
   getAllRequests,
   getAllSchedule,
+  getBookedAppointmentSlots,
   getGradesForStudent,
   getNotificationsForUser,
   getRequestsForStudent,
@@ -25,11 +26,12 @@ async function loadInitialPortalData(): Promise<PortalData | null> {
   if (!user) return null;
 
   if (user.role === "staff") {
-    const [schedule, requests, notifications, students] = await Promise.all([
+    const [schedule, requests, notifications, students, bookedSlots] = await Promise.all([
       getAllSchedule(),
       getAllRequests(),
       getNotificationsForUser(user.id, "staff"),
       listStudentsPublic(),
+      getBookedAppointmentSlots(),
     ]);
     return {
       user: stripPassword(user),
@@ -37,17 +39,19 @@ async function loadInitialPortalData(): Promise<PortalData | null> {
       schedule,
       grades: [],
       requests,
+      bookedSlots,
       notifications,
       students,
     };
   }
 
   const groupCode = user.profile?.groupCode ?? "";
-  const [schedule, grades, requests, notifications] = await Promise.all([
+  const [schedule, grades, requests, notifications, bookedSlots] = await Promise.all([
     getScheduleForGroup(groupCode),
     getGradesForStudent(user.id),
     getRequestsForStudent(user.id),
     getNotificationsForUser(user.id, "student", groupCode),
+    getBookedAppointmentSlots(),
   ]);
 
   return {
@@ -56,6 +60,7 @@ async function loadInitialPortalData(): Promise<PortalData | null> {
     schedule,
     grades,
     requests,
+    bookedSlots,
     notifications,
     students: [],
   };

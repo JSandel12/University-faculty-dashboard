@@ -26,16 +26,18 @@ import {
   ShieldCheck,
   Sparkles,
   Sun,
+  Ticket,
   User as UserIcon,
 } from "lucide-react";
 import { DICT, type Lang } from "@/lib/i18n";
-import type {
-  CertificateRequest,
-  GradeItem,
-  NotificationItem,
-  PublicUser,
-  RequestTypeCode,
-  ScheduleItem,
+import {
+  DEAN_APPOINTMENT_SLOTS,
+  type CertificateRequest,
+  type GradeItem,
+  type NotificationItem,
+  type PublicUser,
+  type RequestTypeCode,
+  type ScheduleItem,
 } from "@/lib/types";
 import { BrandEmblem } from "./BrandEmblem";
 import { CampusMapSection } from "./CampusMapSection";
@@ -60,6 +62,7 @@ export interface PortalData {
   schedule: ScheduleItem[];
   grades: GradeItem[];
   requests: CertificateRequest[];
+  bookedSlots?: string[];
   notifications: NotificationItem[];
   students: PublicUser[];
 }
@@ -87,6 +90,80 @@ const REQUEST_OPTIONS: {
   { code: "custom_appeal", ru: "Свободное обращение в деканат", en: "Custom Dean's Office Appeal" },
 ];
 
+const SITUATION_TRIAGE_CASES: {
+  id: string;
+  keywords: string[];
+  chipRu: string;
+  chipEn: string;
+  typeCode: RequestTypeCode;
+  delivery: "digital_pdf" | "paper_pickup";
+  purposeRu: string;
+  purposeEn: string;
+  checklistRu: string[];
+  checklistEn: string[];
+}[] = [
+  {
+    id: "visa",
+    keywords: ["виз", "консуль", "шенген", "посольств", "visa", "embassy"],
+    chipRu: "Виза / консульство",
+    chipEn: "Visa / Embassy",
+    typeCode: "visa_cert",
+    delivery: "paper_pickup",
+    purposeRu: "Для подачи документов на визу в консульский отдел (с указанием сроков обучения)",
+    purposeEn: "Consular / visa application package with enrollment dates",
+    checklistRu: ["Гербовая печать деканата в каб. 214", "10-минутный талон без очереди", "Выписка статуса студента"],
+    checklistEn: ["Official wet stamp in Rm. 214", "Queue-free 10-min slot", "Verified student status"],
+  },
+  {
+    id: "illness",
+    keywords: ["боле", "забол", "больнич", "врач", "экзам", "перенес", "sick", "ill"],
+    chipRu: "Болезнь / перенос экзамена",
+    chipEn: "Medical / Exam Deferral",
+    typeCode: "custom_appeal",
+    delivery: "digital_pdf",
+    purposeRu: "Прошу перенести дату промежуточного контроля по уважительной причине (медицинская справка 095/у прилагается)",
+    purposeEn: "Requesting exam deferral due to documented medical reason",
+    checklistRu: ["Передача куратору и кафедре", "Новая дата в календаре после одобрения", "Уведомление преподавателю"],
+    checklistEn: ["Routed to advisor & department", "Updated exam date in calendar", "Lecturer notified"],
+  },
+  {
+    id: "retake",
+    keywords: ["пересдач", "долг", "комисс", "незач", "retake", "fail"],
+    chipRu: "Допуск на пересдачу",
+    chipEn: "Retake Permit",
+    typeCode: "retake_permit",
+    delivery: "digital_pdf",
+    purposeRu: "Прошу оформить электронное направление на пересдачу задолженности (с указанием аудитории и даты)",
+    purposeEn: "Requesting electronic exam retake permit with assigned room & slot",
+    checklistRu: ["Цифровой допуск с QR", "Согласование даты с преподавателем", "Автообновление статуса оценки"],
+    checklistEn: ["Digital QR permit", "Date matched with lecturer", "Live gradebook update"],
+  },
+  {
+    id: "hackathon",
+    keywords: ["хакатон", "конференц", "форум", "олимпиад", "освобож", "hackathon", "conference"],
+    chipRu: "Хакатон / конференция",
+    chipEn: "Hackathon / Conference",
+    typeCode: "study_cert",
+    delivery: "digital_pdf",
+    purposeRu: "Справка об обучении и ходатайство об освобождении от занятий на время участия в конкурсе/конференции",
+    purposeEn: "Enrollment proof & attendance excusal for competition / conference",
+    checklistRu: ["Мгновенный PDF с ЭЦП и QR", "Подтверждение уважительного пропуска", "Без визита в деканат"],
+    checklistEn: ["Instant E-Signed QR PDF", "Attendance excusal confirmation", "Zero office visit needed"],
+  },
+  {
+    id: "military",
+    keywords: ["военком", "отсроч", "призыв", "military"],
+    chipRu: "Военкомат / отсрочка",
+    chipEn: "Military Form",
+    typeCode: "military_cert",
+    delivery: "paper_pickup",
+    purposeRu: "Справка очного обучения (Приложение № 2) для военного комиссариата",
+    purposeEn: "Official full-time enrollment certificate for military registration",
+    checklistRu: ["Бумажный оригинал с подписью", "Бронь слота в каб. 214", "Готовность к выдаче за 1 день"],
+    checklistEn: ["Signed paper original", "Booked Rm. 214 pickup slot", "Ready within 1 day"],
+  },
+];
+
 export function PortalWorkspace({
   data,
   lang,
@@ -110,12 +187,16 @@ export function PortalWorkspace({
   const [toast, setToast] = useState<string | null>(null);
 
   // Request creation form
+  const bookedSlots = useMemo(() => data.bookedSlots ?? [], [data.bookedSlots]);
   const [showNewReqForm, setShowNewReqForm] = useState(false);
+  const [situationQuery, setSituationQuery] = useState("");
+  const [matchedSituationId, setMatchedSituationId] = useState<string | null>(null);
   const [reqType, setReqType] = useState<RequestTypeCode>("study_cert");
   const [reqPurpose, setReqPurpose] = useState("");
   const [reqDelivery, setReqDelivery] = useState<"digital_pdf" | "paper_pickup">(
     "digital_pdf"
   );
+  const [reqAppointmentSlot, setReqAppointmentSlot] = useState<string>("14:20");
   const [submittingReq, setSubmittingReq] = useState(false);
 
   // Notifications filter
@@ -193,6 +274,37 @@ export function PortalWorkspace({
     [grades]
   );
 
+  useEffect(() => {
+    const firstFree =
+      DEAN_APPOINTMENT_SLOTS.find((s) => !bookedSlots.includes(s)) ??
+      DEAN_APPOINTMENT_SLOTS[0];
+    setReqAppointmentSlot((prev) =>
+      bookedSlots.includes(prev) ? firstFree : prev
+    );
+  }, [bookedSlots]);
+
+  const applySituationPreset = (preset: (typeof SITUATION_TRIAGE_CASES)[number]) => {
+    setMatchedSituationId(preset.id);
+    setReqType(preset.typeCode);
+    setReqDelivery(preset.delivery);
+    setReqPurpose(lang === "ru" ? preset.purposeRu : preset.purposeEn);
+  };
+
+  const handleSituationTextChange = (text: string) => {
+    setSituationQuery(text);
+    const lower = text.trim().toLowerCase();
+    if (!lower) {
+      setMatchedSituationId(null);
+      return;
+    }
+    const found = SITUATION_TRIAGE_CASES.find((c) =>
+      c.keywords.some((kw) => lower.includes(kw))
+    );
+    if (found) {
+      applySituationPreset(found);
+    }
+  };
+
   const handleSubmitRequest = async (e: React.FormEvent) => {
     e.preventDefault();
     setSubmittingReq(true);
@@ -204,6 +316,8 @@ export function PortalWorkspace({
           typeCode: reqType,
           purpose: reqPurpose,
           deliveryFormat: reqDelivery,
+          appointmentSlot:
+            reqDelivery === "paper_pickup" ? reqAppointmentSlot : undefined,
         }),
       });
       const json = (await res.json()) as { error?: string };
@@ -212,12 +326,18 @@ export function PortalWorkspace({
         return;
       }
       setReqPurpose("");
+      setSituationQuery("");
+      setMatchedSituationId(null);
       setShowNewReqForm(false);
       await onRefresh();
       showToast(
-        lang === "ru"
-          ? "Заявка принята и направлена в деканат"
-          : "Request submitted to Dean's Office"
+        reqDelivery === "paper_pickup"
+          ? lang === "ru"
+            ? `Заявка принята · Талон в каб. 214 на ${reqAppointmentSlot}`
+            : `Submitted · Rm. 214 slot booked for ${reqAppointmentSlot}`
+          : lang === "ru"
+            ? "Заявка принята и направлена в деканат"
+            : "Request submitted to Dean's Office"
       );
     } finally {
       setSubmittingReq(false);
@@ -930,7 +1050,74 @@ export function PortalWorkspace({
                   onSubmit={handleSubmitRequest}
                   className="rounded-3xl bg-[var(--bg-surface)] border border-[var(--accent)]/40 p-5 space-y-4 shadow-sm"
                 >
-                  <h3 className="text-base font-semibold">{t.submitRequestTitle}</h3>
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <h3 className="text-base font-semibold">{t.submitRequestTitle}</h3>
+                    <span className="inline-flex items-center gap-1 text-[10px] font-mono uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-[#C49A45]/15 text-[#9A7426] dark:text-[#DFB863] border border-[#C49A45]/35 font-semibold">
+                      <Sparkles className="w-3 h-3" />
+                      {lang === "ru" ? "Умный подбор + слоты" : "Smart Triage + Slots"}
+                    </span>
+                  </div>
+
+                  {/* Smart Situation Triage */}
+                  <div className="rounded-2xl bg-[var(--bg-page)] border border-[var(--border-color)] p-3.5 space-y-2.5">
+                    <label className="block text-xs font-semibold flex items-center gap-1.5">
+                      <Sparkles className="w-3.5 h-3.5 text-[#C49A45]" />
+                      {lang === "ru"
+                        ? "Опишите ситуацию простыми словами (или выберите сценарий)"
+                        : "Describe your situation (or pick a quick scenario)"}
+                    </label>
+                    <input
+                      type="text"
+                      value={situationQuery}
+                      onChange={(e) => handleSituationTextChange(e.target.value)}
+                      placeholder={
+                        lang === "ru"
+                          ? "Например: «нужна виза», «заболел перед экзаменом», «военкомат»..."
+                          : "E.g.: 'need visa', 'sick before exam', 'conference'..."
+                      }
+                      className="w-full rounded-xl bg-[var(--bg-surface)] border border-[var(--border-color)] px-3 py-2 text-xs outline-none focus:ring-1 focus:ring-[var(--accent)]"
+                    />
+                    <div className="flex flex-wrap gap-1.5">
+                      {SITUATION_TRIAGE_CASES.map((c) => {
+                        const active = matchedSituationId === c.id;
+                        return (
+                          <button
+                            key={c.id}
+                            type="button"
+                            onClick={() => {
+                              setSituationQuery(lang === "ru" ? c.chipRu : c.chipEn);
+                              applySituationPreset(c);
+                            }}
+                            className={`px-2.5 py-1 rounded-full text-[11px] font-medium border transition-colors ${
+                              active
+                                ? "bg-[#0D1B2A] dark:bg-[#1B4B8A] text-white border-transparent"
+                                : "bg-[var(--bg-surface)] border-[var(--border-color)] hover:border-[var(--accent)]"
+                            }`}
+                          >
+                            {lang === "ru" ? c.chipRu : c.chipEn}
+                          </button>
+                        );
+                      })}
+                    </div>
+
+                    {matchedSituationId && (() => {
+                      const activeCase = SITUATION_TRIAGE_CASES.find(
+                        (c) => c.id === matchedSituationId
+                      );
+                      if (!activeCase) return null;
+                      const list = lang === "ru" ? activeCase.checklistRu : activeCase.checklistEn;
+                      return (
+                        <div className="pt-1 flex flex-wrap gap-x-4 gap-y-1 text-[11px] text-emerald-700 dark:text-emerald-300">
+                          {list.map((item) => (
+                            <span key={item} className="inline-flex items-center gap-1">
+                              <CheckCircle2 className="w-3 h-3 shrink-0" />
+                              {item}
+                            </span>
+                          ))}
+                        </div>
+                      );
+                    })()}
+                  </div>
 
                   <div className="grid sm:grid-cols-2 gap-3">
                     <div>
@@ -968,6 +1155,47 @@ export function PortalWorkspace({
                       </select>
                     </div>
                   </div>
+
+                  {/* No-Line 10-Min Appointment Slots (Талон в каб. 214) */}
+                  {reqDelivery === "paper_pickup" && (
+                    <div className="rounded-2xl bg-amber-500/10 border border-amber-500/30 p-3.5 space-y-2.5">
+                      <div className="flex flex-wrap items-center justify-between gap-2">
+                        <span className="text-xs font-semibold text-amber-900 dark:text-amber-200 flex items-center gap-1.5">
+                          <Ticket className="w-4 h-4 text-[#C49A45]" />
+                          {lang === "ru"
+                            ? "Выберите 10-минутный слот в каб. 214 (без живой очереди)"
+                            : "Pick a 10-min pickup slot for Rm. 214 (no hallway line)"}
+                        </span>
+                        <span className="text-[10px] font-mono text-[var(--text-secondary)]">
+                          {lang === "ru" ? "Живой электронный талон" : "Live digital ticket"}
+                        </span>
+                      </div>
+                      <div className="grid grid-cols-4 sm:grid-cols-8 gap-1.5">
+                        {DEAN_APPOINTMENT_SLOTS.map((slot) => {
+                          const taken = bookedSlots.includes(slot);
+                          const selected = reqAppointmentSlot === slot && !taken;
+                          return (
+                            <button
+                              key={slot}
+                              type="button"
+                              disabled={taken}
+                              onClick={() => setReqAppointmentSlot(slot)}
+                              className={`py-2 px-1 rounded-xl text-xs font-mono font-semibold border transition-all ${
+                                taken
+                                  ? "bg-[var(--bg-subtle)] text-[var(--text-secondary)]/50 border-[var(--border-color)] line-through cursor-not-allowed"
+                                  : selected
+                                    ? "bg-[#0D1B2A] dark:bg-[#1B4B8A] text-white border-transparent shadow-sm"
+                                    : "bg-[var(--bg-surface)] border-[var(--border-color)] hover:border-[var(--accent)]"
+                              }`}
+                              title={taken ? (lang === "ru" ? "Слот занят" : "Booked") : slot}
+                            >
+                              {slot}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
 
                   <div>
                     <label className="block text-xs text-[var(--text-secondary)] mb-1">
@@ -1088,6 +1316,30 @@ export function PortalWorkspace({
                         );
                       })}
                     </div>
+
+                    {req.queueTicket && req.appointmentSlot && (
+                      <div className="rounded-2xl bg-amber-500/10 border border-amber-500/30 px-3.5 py-2.5 flex flex-wrap items-center justify-between gap-2 text-xs">
+                        <div className="flex items-center gap-2 min-w-0">
+                          <span className="px-2 py-0.5 rounded-lg bg-[#0D1B2A] dark:bg-[#1B4B8A] text-[#DFB863] font-mono font-bold shrink-0">
+                            {lang === "ru" ? `Талон ${req.queueTicket}` : `Ticket ${req.queueTicket}`}
+                          </span>
+                          <span className="font-semibold text-amber-950 dark:text-amber-100 truncate">
+                            {req.appointmentSlot} · {req.appointmentWindow ?? "каб. 214"}
+                          </span>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setMapFocusRoom("каб. 214");
+                            setActiveTab("campus");
+                          }}
+                          className="inline-flex items-center gap-1 text-[11px] font-semibold text-[var(--accent)] hover:underline shrink-0"
+                        >
+                          <MapPin className="w-3 h-3" />
+                          {lang === "ru" ? "Каб. 214 на карте →" : "Show Rm. 214 →"}
+                        </button>
+                      </div>
+                    )}
 
                     {req.staffComment && (
                       <p className="text-xs rounded-xl bg-[var(--bg-page)] px-3 py-2 text-[var(--text-secondary)]">

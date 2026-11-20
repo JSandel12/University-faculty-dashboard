@@ -3,6 +3,7 @@ import {
   findUserById,
   getAllRequests,
   getAllSchedule,
+  getBookedAppointmentSlots,
   getGradesForStudent,
   getNotificationsForUser,
   getRequestsForStudent,
@@ -25,11 +26,12 @@ export async function GET() {
   }
 
   if (user.role === "staff") {
-    const [schedule, requests, notifications, students] = await Promise.all([
+    const [schedule, requests, notifications, students, bookedSlots] = await Promise.all([
       getAllSchedule(),
       getAllRequests(),
       getNotificationsForUser(user.id, "staff"),
       listStudentsPublic(),
+      getBookedAppointmentSlots(),
     ]);
 
     return NextResponse.json({
@@ -38,17 +40,19 @@ export async function GET() {
       schedule,
       grades: [],
       requests,
+      bookedSlots,
       notifications,
       students,
     });
   }
 
   const groupCode = user.profile?.groupCode ?? "";
-  const [schedule, grades, requests, notifications] = await Promise.all([
+  const [schedule, grades, requests, notifications, bookedSlots] = await Promise.all([
     getScheduleForGroup(groupCode),
     getGradesForStudent(user.id),
     getRequestsForStudent(user.id),
     getNotificationsForUser(user.id, "student", groupCode),
+    getBookedAppointmentSlots(),
   ]);
 
   return NextResponse.json({
@@ -57,6 +61,7 @@ export async function GET() {
     schedule,
     grades,
     requests,
+    bookedSlots,
     notifications,
     students: [],
   });

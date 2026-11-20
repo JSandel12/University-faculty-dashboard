@@ -90,6 +90,17 @@ export type RequestTypeCode =
 
 export type RequestStatus = "submitted" | "in_review" | "ready" | "rejected";
 
+export const DEAN_APPOINTMENT_SLOTS = [
+  "10:00",
+  "10:10",
+  "10:20",
+  "11:30",
+  "14:10",
+  "14:20",
+  "14:30",
+  "15:00",
+] as const;
+
 export interface CertificateRequest {
   id: string;
   studentId: string;
@@ -100,6 +111,9 @@ export interface CertificateRequest {
   titleEn: string;
   purpose: string;
   deliveryFormat: "digital_pdf" | "paper_pickup";
+  appointmentSlot?: string;
+  appointmentWindow?: string;
+  queueTicket?: string;
   status: RequestStatus;
   staffComment?: string;
   verificationCode: string;

@@ -14,6 +14,7 @@ import {
   Search,
   Send,
   Sparkles,
+  Ticket,
   Users,
   Video,
   XCircle,
@@ -780,6 +781,16 @@ export function StaffConsole({
   }
 
   // Default Staff Tab: Dean Command Center + Requests Queue
+  const bookedAppointments = useMemo(
+    () =>
+      requests
+        .filter((r) => r.appointmentSlot && r.queueTicket && r.status !== "rejected")
+        .sort((a, b) =>
+          (a.appointmentSlot ?? "").localeCompare(b.appointmentSlot ?? "")
+        ),
+    [requests]
+  );
+
   const quickReplies =
     lang === "ru"
       ? [
@@ -856,6 +867,45 @@ export function StaffConsole({
         </div>
       </div>
 
+      {/* Booked 10-Min Queue Appointments in Rm. 214 */}
+      {bookedAppointments.length > 0 && (
+        <div className="stagger-item rounded-3xl bg-[var(--bg-surface)] border border-amber-500/35 p-4 sm:p-5 space-y-3 shadow-sm">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <h2 className="text-sm font-semibold flex items-center gap-2">
+              <Ticket className="w-4 h-4 text-[#C49A45]" />
+              {lang === "ru"
+                ? "Запись по талонам в каб. 214 · Слоты сегодня"
+                : "Booked 10-Min Office Visits · Rm. 214 Today"}
+            </h2>
+            <span className="text-[11px] font-mono px-2.5 py-0.5 rounded-full bg-amber-500/15 text-amber-800 dark:text-amber-200 font-semibold">
+              {bookedAppointments.length}{" "}
+              {lang === "ru" ? "визит(а)" : "booked"}
+            </span>
+          </div>
+          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-2.5">
+            {bookedAppointments.map((app) => (
+              <div
+                key={app.id}
+                className="rounded-2xl bg-[var(--bg-page)] border border-[var(--border-color)] p-3 text-xs space-y-1"
+              >
+                <div className="flex items-center justify-between gap-2">
+                  <span className="font-mono font-bold text-[#0D1B2A] dark:text-[#0D1B2A] bg-[#DFB863] px-2 py-0.5 rounded-md">
+                    {app.appointmentSlot} · {app.queueTicket}
+                  </span>
+                  <span className="text-[10px] font-mono text-[var(--text-secondary)]">
+                    {app.groupCode}
+                  </span>
+                </div>
+                <p className="font-semibold truncate">{app.studentName}</p>
+                <p className="text-[11px] text-[var(--text-secondary)] truncate">
+                  {lang === "ru" ? app.title : app.titleEn}
+                </p>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* Mobile-Friendly Filter & Search Bar */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div className="flex gap-1.5 overflow-x-auto pb-1 sm:pb-0">
@@ -927,6 +977,11 @@ export function StaffConsole({
                     <span className="px-2 py-0.5 rounded-md bg-[#1B4B8A]/10 text-[var(--accent)] font-semibold">
                       {req.groupCode}
                     </span>
+                    {req.queueTicket && req.appointmentSlot && (
+                      <span className="px-2 py-0.5 rounded-md bg-amber-500/15 text-amber-800 dark:text-amber-200 font-semibold">
+                        {req.queueTicket} · {req.appointmentSlot}
+                      </span>
+                    )}
                   </div>
                   <h3 className="text-sm sm:text-base font-semibold mt-1.5">
                     {lang === "ru" ? req.title : req.titleEn}

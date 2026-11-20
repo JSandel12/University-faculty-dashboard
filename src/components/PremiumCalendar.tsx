@@ -86,6 +86,47 @@ export function PremiumCalendar({
   });
   const [selectedCalendarDate, setSelectedCalendarDate] = useState<number>(19);
   const gridRef = useRef<HTMLDivElement | null>(null);
+  const inspectorRef = useRef<HTMLDivElement | null>(null);
+
+  // GSAP transition when clicking different classes in the calendar
+  useEffect(() => {
+    const el = inspectorRef.current;
+    if (!el || !activeClass) return;
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+
+    const ctx = gsap.context(() => {
+      gsap.fromTo(
+        el,
+        { opacity: 0.35, y: 12, scale: 0.98 },
+        {
+          opacity: 1,
+          y: 0,
+          scale: 1,
+          duration: 0.34,
+          ease: "power3.out",
+          clearProps: "transform",
+        }
+      );
+
+      const rows = el.querySelectorAll(".cal-inspector-row");
+      if (rows.length > 0) {
+        gsap.fromTo(
+          rows,
+          { opacity: 0, y: 8 },
+          {
+            opacity: 1,
+            y: 0,
+            duration: 0.28,
+            stagger: 0.045,
+            ease: "power2.out",
+            clearProps: "transform",
+          }
+        );
+      }
+    }, inspectorRef);
+
+    return () => ctx.revert();
+  }, [activeClass]);
 
   // Switch to Day timeline automatically on narrow screens on initial mount
   useEffect(() => {
@@ -762,8 +803,11 @@ export function PremiumCalendar({
         <div className="xl:col-span-4 space-y-4">
           {/* Selected Class Inspector OR Quick Prompt */}
           {activeClass ? (
-            <div className="rounded-3xl bg-[var(--bg-surface)] border-2 border-[var(--accent)]/40 p-5 shadow-md space-y-3">
-              <div className="flex items-start justify-between gap-2">
+            <div
+              ref={inspectorRef}
+              className="rounded-3xl bg-[var(--bg-surface)] border-2 border-[var(--accent)]/40 p-5 shadow-md space-y-3"
+            >
+              <div className="cal-inspector-row flex items-start justify-between gap-2">
                 <span className="text-[11px] font-mono uppercase tracking-wider text-[var(--accent)] font-semibold">
                   {lang === "ru"
                     ? KIND_STYLES[activeClass.kind].labelRu
@@ -778,10 +822,10 @@ export function PremiumCalendar({
                   <X className="w-4 h-4" />
                 </button>
               </div>
-              <h3 className="text-lg font-semibold leading-snug">
+              <h3 className="cal-inspector-row text-lg font-semibold leading-snug">
                 {lang === "ru" ? activeClass.subject : activeClass.subjectEn}
               </h3>
-              <div className="space-y-1.5 text-xs text-[var(--text-secondary)]">
+              <div className="cal-inspector-row space-y-1.5 text-xs text-[var(--text-secondary)]">
                 <div className="flex items-center gap-2">
                   <Clock className="w-3.5 h-3.5 text-[var(--accent)]" />
                   <span>
@@ -806,7 +850,7 @@ export function PremiumCalendar({
                 </div>
               </div>
               {activeClass.changeNote && (
-                <div className="rounded-2xl bg-amber-500/10 border border-amber-500/25 p-3 text-xs text-amber-800 dark:text-amber-200">
+                <div className="cal-inspector-row rounded-2xl bg-amber-500/10 border border-amber-500/25 p-3 text-xs text-amber-800 dark:text-amber-200">
                   {lang === "ru" ? activeClass.changeNote : activeClass.changeNoteEn}
                 </div>
               )}
@@ -817,7 +861,7 @@ export function PremiumCalendar({
                     lang === "ru" ? activeClass.subject : activeClass.subjectEn
                   )
                 }
-                className="w-full py-2.5 px-4 rounded-xl bg-[#0D1B2A] dark:bg-[#1B4B8A] text-white text-xs font-semibold hover:opacity-95"
+                className="cal-inspector-row w-full py-2.5 px-4 rounded-xl bg-[#0D1B2A] dark:bg-[#1B4B8A] text-white text-xs font-semibold hover:opacity-95"
               >
                 {lang === "ru"
                   ? "Создать обращение в деканат по паре"
