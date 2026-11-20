@@ -3,7 +3,7 @@
 > **Конкурсный прототип** для соревнования *«Цифровой деканат будущего»*.  
 > Все персональные данные, оценки, расписание и документы **полностью вымышленные**. Прототип **не является официальным сервисом МГИМО** и использует оригинальную геометрическую эмблему.
 
-- **Живое демо (Amvera Cloud):** [https://mgimoai-haithem.amvera.io](https://mgimoai-haithem.amvera.io) *(доступно из РФ без VPN)*
+- **Живое демо (Amvera Cloud):** [https://diplomat-decanat-hsandel12.msk1.amvera.tech/](https://diplomat-decanat-hsandel12.msk1.amvera.tech/) *(доступно из РФ без VPN)*
 
 ## Ключевые возможности
 
@@ -56,4 +56,4 @@ npm run dev
 
 1. Проект собирается в production-режиме на Node.js 22 (`npm run build && npm run start`).
 2. В настройках окружения задаётся `AUTH_SECRET` (случайная строка от 32 символов).
-3. Актуальное развёрнутое демо доступно по адресу: [https://mgimoai-haithem.amvera.io](https://mgimoai-haithem.amvera.io).
+3. Актуальное развёрнутое демо доступно по адресу: [https://diplomat-decanat-hsandel12.msk1.amvera.tech/](https://diplomat-decanat-hsandel12.msk1.amvera.tech/).
