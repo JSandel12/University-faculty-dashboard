@@ -120,33 +120,33 @@ export function LanguageSwitch({
       aria-checked={isEn}
       aria-label={isEn ? "Switch language to Russian" : "Switch language to English"}
       onClick={handleClick}
-      className={`lang-switch-animated relative inline-grid grid-cols-2 items-center p-0.5 rounded-full h-8 w-[104px] select-none cursor-pointer transition-transform duration-150 active:scale-[0.97] shrink-0 ${trackClass} ${className}`}
+      className={`lang-switch-animated relative inline-grid grid-cols-2 items-center p-0.5 rounded-full h-7 w-[88px] sm:h-8 sm:w-[104px] select-none cursor-pointer transition-transform duration-150 active:scale-[0.97] shrink-0 ${trackClass} ${className}`}
     >
       {/* Springy iPhone-style sliding pill thumb */}
       <span
         aria-hidden="true"
-        className={`lang-switch-animated absolute top-0.5 left-0.5 h-7 w-[49px] rounded-full transition-transform duration-300 ease-[cubic-bezier(0.34,1.56,0.64,1)] ${thumbClass} ${
-          isEn ? "translate-x-[50px]" : "translate-x-0"
+        className={`lang-switch-animated absolute top-0.5 left-0.5 h-6 w-[41px] sm:h-7 sm:w-[49px] rounded-full transition-transform duration-300 ease-[cubic-bezier(0.34,1.56,0.64,1)] ${thumbClass} ${
+          isEn ? "translate-x-[42px] sm:translate-x-[50px]" : "translate-x-0"
         }`}
       />
 
       {/* Left Side: RU */}
       <span
-        className={`lang-switch-animated relative z-10 flex items-center justify-center gap-1 text-[11px] font-bold tracking-tight transition-all duration-200 ${
+        className={`lang-switch-animated relative z-10 flex items-center justify-center gap-1 text-[10px] sm:text-[11px] font-bold tracking-tight transition-all duration-200 ${
           !isEn ? activeText : inactiveText
         }`}
       >
-        <FlagRU className="w-3.5 h-3.5" />
+        <FlagRU className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
         <span>RU</span>
       </span>
 
       {/* Right Side: EN */}
       <span
-        className={`lang-switch-animated relative z-10 flex items-center justify-center gap-1 text-[11px] font-bold tracking-tight transition-all duration-200 ${
+        className={`lang-switch-animated relative z-10 flex items-center justify-center gap-1 text-[10px] sm:text-[11px] font-bold tracking-tight transition-all duration-200 ${
           isEn ? activeText : inactiveText
         }`}
       >
-        <FlagUK className="w-3.5 h-3.5" />
+        <FlagUK className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
         <span>EN</span>
       </span>
     </button>

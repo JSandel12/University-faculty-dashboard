@@ -141,10 +141,10 @@ export function LoginView({
             <button
               type="button"
               onClick={onToggleDark}
-              className="w-8 h-8 flex items-center justify-center rounded-full bg-white/10 hover:bg-white/20 backdrop-blur-md border border-white/15 transition-colors shrink-0"
+              className="w-7 h-7 sm:w-8 sm:h-8 flex items-center justify-center rounded-full bg-white/10 hover:bg-white/20 backdrop-blur-md border border-white/15 transition-colors shrink-0"
               aria-label="Toggle theme"
             >
-              {dark ? <Sun className="w-3.5 h-3.5" /> : <Moon className="w-3.5 h-3.5" />}
+              {dark ? <Sun className="w-3 h-3 sm:w-3.5 sm:h-3.5" /> : <Moon className="w-3 h-3 sm:w-3.5 sm:h-3.5" />}
             </button>
           </div>
         </div>
