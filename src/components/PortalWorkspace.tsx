@@ -201,6 +201,10 @@ export function PortalWorkspace({
   const [submittingReq, setSubmittingReq] = useState(false);
   const newReqFormRef = useRef<HTMLFormElement | null>(null);
   const slotPickerRef = useRef<HTMLDivElement | null>(null);
+  const reqListRef = useRef<HTMLDivElement | null>(null);
+  const notifListRef = useRef<HTMLDivElement | null>(null);
+  const idorResultRef = useRef<HTMLDivElement | null>(null);
+  const toastRef = useRef<HTMLDivElement | null>(null);
 
   // Animate "Заказать справку" drawer when toggled open
   useEffect(() => {
@@ -277,6 +281,92 @@ export function PortalWorkspace({
     body: string;
   } | null>(null);
   const [idorTesting, setIdorTesting] = useState(false);
+
+  // Animate Student Requests list when filter pill changes
+  useEffect(() => {
+    const el = reqListRef.current;
+    if (!el || activeTab !== "requests") return;
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    const cards = el.querySelectorAll(".stu-req-card");
+    if (cards.length === 0) return;
+
+    const ctx = gsap.context(() => {
+      gsap.fromTo(
+        cards,
+        { opacity: 0, y: 10 },
+        {
+          opacity: 1,
+          y: 0,
+          duration: 0.28,
+          stagger: 0.04,
+          ease: "power2.out",
+          clearProps: "transform",
+        }
+      );
+    }, reqListRef);
+
+    return () => ctx.revert();
+  }, [stuReqFilter, activeTab]);
+
+  // Animate Notifications list when filter pill changes
+  useEffect(() => {
+    const el = notifListRef.current;
+    if (!el || activeTab !== "notifications") return;
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    const cards = el.querySelectorAll(".stu-notif-card");
+    if (cards.length === 0) return;
+
+    const ctx = gsap.context(() => {
+      gsap.fromTo(
+        cards,
+        { opacity: 0, y: 10 },
+        {
+          opacity: 1,
+          y: 0,
+          duration: 0.26,
+          stagger: 0.035,
+          ease: "power2.out",
+          clearProps: "transform",
+        }
+      );
+    }, notifListRef);
+
+    return () => ctx.revert();
+  }, [notifFilter, activeTab]);
+
+  // Animate IDOR 403 test output card
+  useEffect(() => {
+    const el = idorResultRef.current;
+    if (!el || !idorTestResult) return;
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+
+    const ctx = gsap.context(() => {
+      gsap.fromTo(
+        el,
+        { opacity: 0, y: 8, scale: 0.985 },
+        { opacity: 1, y: 0, scale: 1, duration: 0.28, ease: "power2.out", clearProps: "transform" }
+      );
+    }, idorResultRef);
+
+    return () => ctx.revert();
+  }, [idorTestResult]);
+
+  // Animate floating Toast notification
+  useEffect(() => {
+    const el = toastRef.current;
+    if (!el || !toast) return;
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+
+    const ctx = gsap.context(() => {
+      gsap.fromTo(
+        el,
+        { opacity: 0, y: 16, scale: 0.95 },
+        { opacity: 1, y: 0, scale: 1, duration: 0.28, ease: "back.out(1.6)", clearProps: "transform" }
+      );
+    }, toastRef);
+
+    return () => ctx.revert();
+  }, [toast]);
 
   const showToast = (msg: string) => {
     setToast(msg);
@@ -1302,7 +1392,7 @@ export function PortalWorkspace({
                 </form>
               )}
 
-              <div className="grid gap-3.5">
+              <div ref={reqListRef} className="grid gap-3.5">
                 {requests
                   .filter((r) =>
                     stuReqFilter === "all" ? true : r.status === stuReqFilter
@@ -1310,7 +1400,7 @@ export function PortalWorkspace({
                   .map((req) => (
                   <div
                     key={req.id}
-                    className="stagger-item rounded-2xl bg-[var(--bg-surface)] border border-[var(--border-color)] p-4 sm:p-5 space-y-3"
+                    className="stu-req-card stagger-item rounded-2xl bg-[var(--bg-surface)] border border-[var(--border-color)] p-4 sm:p-5 space-y-3"
                   >
                     <div className="flex flex-wrap items-start justify-between gap-3">
                       <div className="min-w-0">
@@ -1464,7 +1554,7 @@ export function PortalWorkspace({
                 </div>
               </div>
 
-              <div className="grid gap-3">
+              <div ref={notifListRef} className="grid gap-3">
                 {notifications
                   .filter((n) => (notifFilter === "urgent" ? n.urgent : true))
                   .map((n) => {
@@ -1472,7 +1562,7 @@ export function PortalWorkspace({
                     return (
                       <div
                         key={n.id}
-                        className={`stagger-item rounded-2xl bg-[var(--bg-surface)] border p-4 sm:p-5 transition-all ${
+                        className={`stu-notif-card stagger-item rounded-2xl bg-[var(--bg-surface)] border p-4 sm:p-5 transition-all ${
                           n.urgent && !isRead
                             ? "border-amber-500/50"
                             : "border-[var(--border-color)]"
@@ -1652,7 +1742,10 @@ export function PortalWorkspace({
                       {idorTesting ? "..." : t.securityTestBtn}
                     </button>
                     {idorTestResult && (
-                      <div className="rounded-xl bg-[#0D1B2A] text-emerald-300 p-3 font-mono text-[11px] overflow-x-auto">
+                      <div
+                        ref={idorResultRef}
+                        className="rounded-xl bg-[#0D1B2A] text-emerald-300 p-3 font-mono text-[11px] overflow-x-auto"
+                      >
                         <div>HTTP {idorTestResult.status} Forbidden</div>
                         <div className="text-white/80 mt-1 break-all">
                           {idorTestResult.body}
@@ -1807,7 +1900,10 @@ export function PortalWorkspace({
 
       {/* TOAST */}
       {toast && (
-        <div className="fixed bottom-20 lg:bottom-6 right-4 z-[80] rounded-2xl bg-[#0D1B2A] text-white px-4 py-3 text-xs font-medium shadow-xl border border-[#C49A45]/40">
+        <div
+          ref={toastRef}
+          className="fixed bottom-20 lg:bottom-6 right-4 z-[80] rounded-2xl bg-[#0D1B2A] text-white px-4 py-3 text-xs font-medium shadow-xl border border-[#C49A45]/40"
+        >
           {toast}
         </div>
       )}

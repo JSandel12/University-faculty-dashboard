@@ -70,6 +70,33 @@ export function StaffConsole({
   const [editStatus, setEditStatus] = useState<ScheduleStatus>("room_changed");
   const [editNote, setEditNote] = useState("");
   const staffInspectorRef = useRef<HTMLDivElement | null>(null);
+  const staffQueueListRef = useRef<HTMLDivElement | null>(null);
+
+  // Animate Staff Queue cards when status filter changes
+  useEffect(() => {
+    const el = staffQueueListRef.current;
+    if (!el || activeTab !== "staff_queue") return;
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    const cards = el.querySelectorAll(".staff-req-card");
+    if (cards.length === 0) return;
+
+    const ctx = gsap.context(() => {
+      gsap.fromTo(
+        cards,
+        { opacity: 0, y: 10 },
+        {
+          opacity: 1,
+          y: 0,
+          duration: 0.28,
+          stagger: 0.035,
+          ease: "power2.out",
+          clearProps: "transform",
+        }
+      );
+    }, staffQueueListRef);
+
+    return () => ctx.revert();
+  }, [filterStatus, activeTab]);
 
   // Broadcast state
   const [bcGroup, setBcGroup] = useState("ALL");
@@ -1005,7 +1032,7 @@ export function StaffConsole({
 
       {/* Mobile-Friendly Filter & Search Bar */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-        <div className="flex gap-1.5 overflow-x-auto pb-1 sm:pb-0">
+        <div className="flex gap-1.5 overflow-x-auto no-scrollbar pb-1 sm:pb-0">
           {(["all", "submitted", "in_review", "ready", "rejected"] as const).map(
             (st) => {
               const count =
@@ -1049,7 +1076,7 @@ export function StaffConsole({
       </div>
 
       {/* Request Queue Cards */}
-      <div className="grid gap-3.5">
+      <div ref={staffQueueListRef} className="grid gap-3.5">
         {filteredRequests.length === 0 ? (
           <div className="rounded-3xl bg-[var(--bg-surface)] border border-[var(--border-color)] p-8 text-center text-sm text-[var(--text-secondary)]">
             {lang === "ru"
@@ -1060,7 +1087,7 @@ export function StaffConsole({
           filteredRequests.map((req) => (
             <div
               key={req.id}
-              className="stagger-item rounded-2xl bg-[var(--bg-surface)] border border-[var(--border-color)] p-4 sm:p-5 space-y-3 shadow-sm"
+              className="staff-req-card stagger-item rounded-2xl bg-[var(--bg-surface)] border border-[var(--border-color)] p-4 sm:p-5 space-y-3 shadow-sm"
             >
               <div className="flex flex-wrap items-start justify-between gap-2">
                 <div className="min-w-0">
