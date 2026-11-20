@@ -1,6 +1,7 @@
 "use client";
 
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
+import gsap from "gsap";
 import {
   AlertTriangle,
   Award,
@@ -198,6 +199,71 @@ export function PortalWorkspace({
   );
   const [reqAppointmentSlot, setReqAppointmentSlot] = useState<string>("14:20");
   const [submittingReq, setSubmittingReq] = useState(false);
+  const newReqFormRef = useRef<HTMLFormElement | null>(null);
+  const slotPickerRef = useRef<HTMLDivElement | null>(null);
+
+  // Animate "Заказать справку" drawer when toggled open
+  useEffect(() => {
+    const el = newReqFormRef.current;
+    if (!showNewReqForm || !el) return;
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+
+    const ctx = gsap.context(() => {
+      gsap.fromTo(
+        el,
+        { opacity: 0, y: -14, scale: 0.985 },
+        {
+          opacity: 1,
+          y: 0,
+          scale: 1,
+          duration: 0.34,
+          ease: "power3.out",
+          clearProps: "transform",
+        }
+      );
+      const steps = el.querySelectorAll(".req-form-anim");
+      if (steps.length > 0) {
+        gsap.fromTo(
+          steps,
+          { opacity: 0, y: 10 },
+          {
+            opacity: 1,
+            y: 0,
+            duration: 0.28,
+            stagger: 0.045,
+            ease: "power2.out",
+            clearProps: "transform",
+          }
+        );
+      }
+    }, newReqFormRef);
+
+    return () => ctx.revert();
+  }, [showNewReqForm]);
+
+  // Animate 10-min appointment slot picker when selecting paper pickup
+  useEffect(() => {
+    const el = slotPickerRef.current;
+    if (!showNewReqForm || reqDelivery !== "paper_pickup" || !el) return;
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+
+    const ctx = gsap.context(() => {
+      gsap.fromTo(
+        el,
+        { opacity: 0, y: 8, scale: 0.985 },
+        {
+          opacity: 1,
+          y: 0,
+          scale: 1,
+          duration: 0.28,
+          ease: "power2.out",
+          clearProps: "transform",
+        }
+      );
+    }, slotPickerRef);
+
+    return () => ctx.revert();
+  }, [showNewReqForm, reqDelivery]);
 
   // Notifications filter
   const [notifFilter, setNotifFilter] = useState<"all" | "urgent">("all");
@@ -1047,10 +1113,11 @@ export function PortalWorkspace({
 
               {showNewReqForm && (
                 <form
+                  ref={newReqFormRef}
                   onSubmit={handleSubmitRequest}
                   className="rounded-3xl bg-[var(--bg-surface)] border border-[var(--accent)]/40 p-5 space-y-4 shadow-sm"
                 >
-                  <div className="flex flex-wrap items-center justify-between gap-2">
+                  <div className="req-form-anim flex flex-wrap items-center justify-between gap-2">
                     <h3 className="text-base font-semibold">{t.submitRequestTitle}</h3>
                     <span className="inline-flex items-center gap-1 text-[10px] font-mono uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-[#C49A45]/15 text-[#9A7426] dark:text-[#DFB863] border border-[#C49A45]/35 font-semibold">
                       <Sparkles className="w-3 h-3" />
@@ -1059,7 +1126,7 @@ export function PortalWorkspace({
                   </div>
 
                   {/* Smart Situation Triage */}
-                  <div className="rounded-2xl bg-[var(--bg-page)] border border-[var(--border-color)] p-3.5 space-y-2.5">
+                  <div className="req-form-anim rounded-2xl bg-[var(--bg-page)] border border-[var(--border-color)] p-3.5 space-y-2.5">
                     <label className="block text-xs font-semibold flex items-center gap-1.5">
                       <Sparkles className="w-3.5 h-3.5 text-[#C49A45]" />
                       {lang === "ru"
@@ -1158,7 +1225,10 @@ export function PortalWorkspace({
 
                   {/* No-Line 10-Min Appointment Slots (Талон в каб. 214) */}
                   {reqDelivery === "paper_pickup" && (
-                    <div className="rounded-2xl bg-amber-500/10 border border-amber-500/30 p-3.5 space-y-2.5">
+                    <div
+                      ref={slotPickerRef}
+                      className="rounded-2xl bg-amber-500/10 border border-amber-500/30 p-3.5 space-y-2.5"
+                    >
                       <div className="flex flex-wrap items-center justify-between gap-2">
                         <span className="text-xs font-semibold text-amber-900 dark:text-amber-200 flex items-center gap-1.5">
                           <Ticket className="w-4 h-4 text-[#C49A45]" />
