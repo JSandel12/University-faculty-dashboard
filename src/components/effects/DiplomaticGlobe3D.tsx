@@ -227,7 +227,7 @@ export function DiplomaticGlobe3D({
 
       const scene = new THREE.Scene();
       const camera = new THREE.PerspectiveCamera(40, width / height, 0.1, 100);
-      camera.position.set(0, 0.2, 4.25);
+      camera.position.set(0, 0.2, 4.85);
 
       renderer = new THREE.WebGLRenderer({
         antialias: true,
