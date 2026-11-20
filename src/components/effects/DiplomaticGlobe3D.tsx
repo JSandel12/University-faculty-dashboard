@@ -707,9 +707,6 @@ export function DiplomaticGlobe3D({
                 ref={mountRef}
                 className="w-full h-full rounded-2xl bg-[#07111F]/70 border border-white/10 cursor-grab active:cursor-grabbing touch-pan-y overflow-hidden"
               />
-              <span className="pointer-events-none absolute bottom-2.5 left-3 text-[10px] font-mono text-white/60 bg-black/35 px-2 py-0.5 rounded-full backdrop-blur-sm">
-                {lang === "ru" ? "Вращайте сферу · Нажмите на маячок" : "Drag sphere · Tap beacon"}
-              </span>
             </div>
           )}
         </div>
