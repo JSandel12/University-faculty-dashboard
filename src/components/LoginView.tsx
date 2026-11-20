@@ -118,8 +118,8 @@ export function LoginView({
         />
 
         {/* Top Bar */}
-        <div className="relative z-10 flex items-center justify-between gap-2 hero-stagger">
-          <div className="flex items-center gap-2.5 min-w-0">
+        <div className="relative z-10 flex items-center justify-between gap-3 hero-stagger">
+          <div className="flex items-center gap-2 min-w-0">
             <div className="p-1.5 sm:p-2 rounded-2xl bg-white/10 backdrop-blur-md border border-white/15 shrink-0">
               <BrandEmblem className="w-6 h-6 sm:w-7 sm:h-7 text-white" />
             </div>
@@ -128,7 +128,10 @@ export function LoginView({
                 {t.brandTitle}
               </p>
               <p className="text-[11px] sm:text-xs text-white/75 mt-1 truncate">
-                {t.brandSubtitle}
+                <span className="sm:hidden">
+                  {lang === "ru" ? "Цифровой деканат" : "Digital Dean"}
+                </span>
+                <span className="hidden sm:inline">{t.brandSubtitle}</span>
               </p>
             </div>
           </div>
@@ -138,7 +141,7 @@ export function LoginView({
             <button
               type="button"
               onClick={onToggleDark}
-              className="p-2 rounded-full bg-white/10 hover:bg-white/20 backdrop-blur-md border border-white/15 transition-colors"
+              className="w-8 h-8 flex items-center justify-center rounded-full bg-white/10 hover:bg-white/20 backdrop-blur-md border border-white/15 transition-colors shrink-0"
               aria-label="Toggle theme"
             >
               {dark ? <Sun className="w-3.5 h-3.5" /> : <Moon className="w-3.5 h-3.5" />}
