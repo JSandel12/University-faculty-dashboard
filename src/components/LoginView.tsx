@@ -118,7 +118,7 @@ export function LoginView({
         />
 
         {/* Top Bar */}
-        <div className="relative z-10 flex items-center justify-between gap-3 hero-stagger">
+        <div className="relative z-10 flex items-center justify-between gap-2 sm:gap-3 hero-stagger">
           <div className="flex items-center gap-2 min-w-0">
             <div className="p-1.5 sm:p-2 rounded-2xl bg-white/10 backdrop-blur-md border border-white/15 shrink-0">
               <BrandEmblem className="w-6 h-6 sm:w-7 sm:h-7 text-white" />
@@ -127,11 +127,8 @@ export function LoginView({
               <p className="font-semibold text-sm sm:text-base tracking-tight leading-none truncate">
                 {t.brandTitle}
               </p>
-              <p className="text-[11px] sm:text-xs text-white/75 mt-1 truncate">
-                <span className="sm:hidden">
-                  {lang === "ru" ? "Цифровой деканат" : "Digital Dean"}
-                </span>
-                <span className="hidden sm:inline">{t.brandSubtitle}</span>
+              <p className="text-[9.5px] sm:text-xs tracking-tight sm:tracking-normal leading-tight text-white/75 mt-1 truncate">
+                {t.brandSubtitle}
               </p>
             </div>
           </div>
